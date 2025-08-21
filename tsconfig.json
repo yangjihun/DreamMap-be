@@ -9,7 +9,8 @@
       "@repos/*": ["repos/*"],
       "@routes/*": ["routes/*"],
       "@services/*": ["services/*"],
-      "@utils/*": ["utils/*"]
+      "@utils/*": ["utils/*"],
+      "@dto/*": ["dto/*"]
     },
     "target": "ES2019",
     "module": "commonjs",
