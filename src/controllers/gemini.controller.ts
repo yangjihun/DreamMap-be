@@ -9,7 +9,6 @@ dotenv.config();
 const ai = new GoogleGenAI({
   apiKey: (process.env.GEMINI_API_KEY as string) || "",
 });
-123123;
 
 const geminiController = {
   generateContent: async (req: Request, res: Response) => {
