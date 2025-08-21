@@ -1,4 +1,4 @@
-import multer from "multer"
+import multer from "multer";
 import { Request, Response, NextFunction } from "express";
 const pdfParse = require("pdf-parse");
 
