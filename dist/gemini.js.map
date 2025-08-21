@@ -1,0 +1,1 @@
+{"version":3,"file":"gemini.js","sourceRoot":"","sources":["../src/gemini.ts"],"names":[],"mappings":";;;AAAA,yDAA2D;AAE3D,MAAM,KAAK,GAAG,IAAI,kCAAkB,CAAC,OAAO,CAAC,GAAG,CAAC,cAAc,IAAI,EAAE,CAAC,CAAC;AAE1D,QAAA,WAAW,GAAG,KAAK,CAAC,kBAAkB,CAAC;IAClD,KAAK,EAAE,kBAAkB;CAC1B,CAAC,CAAC"}
