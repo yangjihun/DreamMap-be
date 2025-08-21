@@ -25,7 +25,7 @@ interface Config {
 // config를 통해 접근할 수 있어 관리와 테스트가 편리해집니다.
 const config: Config = {
   env: process.env.NODE_ENV ?? "development",
-  port: process.env.PORT ?? 3000,
+  port: process.env.PORT ?? 5000,
   jwt: {
     secret: process.env.JWT_SECRET_KEY ?? "your-secret",
     expiresIn: "1d",
