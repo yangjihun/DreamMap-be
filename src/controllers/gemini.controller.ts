@@ -1,41 +1,45 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Request, Response } from "express";
-import dotenv from "dotenv";
 import { roadmapPrompt } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
-
-dotenv.config();
+import config from "@config/config";
 
 const ai = new GoogleGenAI({
-  apiKey: (process.env.GEMINI_API_KEY as string) || "",
+  apiKey: config.gemini.apiKey,
 });
 
 const geminiController = {
-  generateContent: async (req: Request, res: Response) => {
-    try {
-      const aiResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        // 사용 시 aiPromptMessage에 함수 추가해서 불러오기
-        // ai review와 roadmap은 미들웨어 사용해서 각각 필요한 함수나 값들을 받아올 수 있도록 구현 필요
-        contents: roadmapPrompt("서울", "프론트엔드"), // 명령문
-        config: {
-          thinkingConfig: {
-            thinkingBudget: 0, // Disables thinking -> 속도개선
-          },
-          responseMimeType: "application/json",
-          // 사용 시 geminiResSchema에 함수 추가해서 불러오기
-          // ai review와 roadmap은 미들웨어 사용해서 각각 필요한 함수나 값들을 받아올 수 있도록 구현 필요
-          responseSchema: roadmapGeminiSchema,
-        },
-      });
-      console.log(">>>>>>", aiResponse.text);
-      return res.status(200).json({ status: "success" });
-    } catch (error: any) {
-      res.status(400).json({ status: "fail", message: error.message });
-    }
-    console.log("test중");
+  generateRoadmapContent: async ({
+    location,
+    interestJob,
+  }: {
+    location: String;
+    interestJob: String;
+  }) => {
+    if (!location || !interestJob)
+      throw new Error("location 또는 interestJob이 없습니다.");
 
-    // res.status(200).json({ status: "success" });
+    const aiResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: roadmapPrompt(location, interestJob), // 명령문
+      config: {
+        thinkingConfig: {
+          thinkingBudget: 0, // Disables thinking -> 속도개선
+        },
+        systemInstruction:
+          "당신은 커리어 로드맵 설계와 지역 맞춤 학습자료 큐레이션에 특화된 전문가입니다.",
+        responseMimeType: "application/json",
+        responseSchema: roadmapGeminiSchema,
+      },
+    });
+    if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
+
+    const formatData = JSON.parse(aiResponse.text);
+    const mappedData = formatData.map((item: any) => ({
+      period: item.period,
+      paths: item.plan.paths,
+    }));
+    return mappedData;
   },
 };
 

@@ -3,5 +3,5 @@ import geminiController from "@controllers/gemini.controller";
 
 const router = express.Router();
 
-router.post("/", geminiController.generateContent);
+router.post("/", geminiController.generateRoadmapContent);
 export default router;
