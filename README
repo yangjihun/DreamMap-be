@@ -1,6 +1,5 @@
-
 # Command
-npm i -D typescript ts-node-dev tsconfig-paths @types/node @types/express @types/body-parser @types/cors && npm i dotenv mongoose @google/generative-ai
+npm i typescript ts-node-dev tsconfig-paths @types/node @types/express @types/body-parser @types/cors dotenv mongoose @google/genai zod
 
 # To Run
 npm run dev

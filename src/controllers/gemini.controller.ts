@@ -1,8 +1,15 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Request, Response } from "express";
-import { roadmapPrompt } from "@utils/aiPromptMessage";
-import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import config from "@config/config";
+import {
+  roadmapPrompt,
+  introItemPrompt,
+  experienceItemPrompt,
+  projectItemPrompt,
+  skillItemPrompt,
+} from "@utils/aiPromptMessage";
+import { roadmapGeminiSchema } from "@utils/geminiResSchema";
+const Resume = require("@models/Resume");
 
 const ai = new GoogleGenAI({
   apiKey: config.gemini.apiKey,
@@ -40,6 +47,43 @@ const geminiController = {
       paths: item.plan.paths,
     }));
     return mappedData;
+  },
+  generateReview: async (req: Request, res: Response) => {
+    try {
+      let item;
+      let resume = await Resume.findById("68a7b8d77433cbd888394172");
+      if (!resume) {
+        throw new Error("resume not found");
+      }
+      for (let i = 0; i < resume.sessions.length; i++) {
+        for (let j = 0; j < resume.sessions[i].items.length; j++) {
+          let sessionTitle = resume.sessions[i].title;
+          item = resume.sessions[i].items[j];
+          let prompt;
+          if (sessionTitle === "Introduction") {
+            prompt = introItemPrompt(item);
+          } else if (sessionTitle === "Work Experience") {
+            prompt = experienceItemPrompt(item);
+          } else if (sessionTitle === "Project") {
+            prompt = projectItemPrompt(item);
+          } else if (sessionTitle === "Skills") {
+            prompt = skillItemPrompt(item);
+          } else {
+            prompt = introItemPrompt(item); // fallback
+          }
+          const aiResponse = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+          });
+          console.log(">>>>>>", aiResponse.text);
+          item.review = aiResponse.text;
+        }
+      }
+      await resume.save();
+      return res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", message: error.message });
+    }
   },
 };
 
