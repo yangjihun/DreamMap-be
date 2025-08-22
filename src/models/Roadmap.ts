@@ -1,4 +1,4 @@
-import { Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const resourceSchema = new Schema({
   resourceType: { type: String, enum: ["course", "study"], default: "course" },
@@ -23,12 +23,16 @@ const pathSchema = new Schema(
 const roadmapSchema = new Schema(
   {
     resumeId: { type: Schema.Types.ObjectId, ref: "Resume", required: true },
-    plan: {
-      type: String,
-      enum: ["3months", "6months", "1year"],
-      default: "3months",
-    },
-    paths: [pathSchema],
+    plans: [
+      {
+        period: {
+          type: String,
+          enum: ["3months", "6months", "1year"],
+          default: "3months",
+        },
+        paths: [pathSchema],
+      },
+    ],
   },
   { timestamps: true }
 );
