@@ -19,8 +19,7 @@ export const roadmapPrompt = (location: String, interestJob: String) =>
 - price는 통화 기호 포함, 모르면 "N/A".
 - rating은 1~5 소수점 허용, 모르면 null.
 - provider는 기관/주관사/플랫폼명.
-- 중복 최소화.
-`;
+- 중복 최소화.`;
 const items = require("@models/Resume");
 
 export const introItemPrompt = (item: any) =>
