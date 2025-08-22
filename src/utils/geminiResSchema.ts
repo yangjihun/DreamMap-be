@@ -5,16 +5,48 @@ export const roadmapGeminiSchema = {
   items: {
     type: Type.OBJECT,
     properties: {
-      title: { type: Type.STRING },
-      description: { type: Type.STRING },
-      skill: {
-        type: Type.ARRAY,
-        items: { type: Type.STRING },
+      period: { type: Type.STRING, enum: ["3months", "6months", "1year"] },
+      plan: {
+        type: Type.OBJECT,
+        properties: {
+          paths: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                description: { type: Type.STRING },
+                skills: {
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                },
+                duration: { type: Type.STRING },
+
+                resources: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      resourceType: {
+                        type: Type.STRING,
+                        enum: ["study", "course"],
+                      },
+                      name: { type: Type.STRING },
+                      location: { type: Type.STRING },
+                      price: { type: Type.STRING },
+                      rating: { type: Type.NUMBER },
+                      provider: { type: Type.STRING },
+                    },
+                    additionalProperties: false,
+                  },
+                },
+              },
+              additionalProperties: false,
+            },
+          },
+        },
+        additionalProperties: false,
       },
-      duration: { type: Type.STRING },
-      maxItems: 3,
-      minItems: 3,
     },
-    propertyOrdering: ["title", "description", "skill", "duration"],
   },
 };
