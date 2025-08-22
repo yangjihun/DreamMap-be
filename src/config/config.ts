@@ -18,6 +18,9 @@ interface Config {
   mongo: {
     uri: string | undefined;
   };
+  gemini: {
+    apiKey: string | undefined;
+  };
 }
 
 // process.env에서 필요한 값들을 읽어서 config 객체로 정리
@@ -35,6 +38,9 @@ const config: Config = {
   },
   mongo: {
     uri: process.env.MONGODB_URI_PROD,
+  },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY,
   },
 };
 
