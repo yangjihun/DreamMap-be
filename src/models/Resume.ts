@@ -1,5 +1,34 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+import { Schema, model, Model, HydratedDocument, Types } from "mongoose";
+
+export interface Item {
+  title: string;
+  text: string;
+  startDate?: string;
+  endDate?: string;
+  review?: string;
+}
+
+export interface Session {
+  key: "intro" | "body" | "closing";
+  title: string;
+  items: Item[];
+  wordCount: number;
+}
+
+export interface Resume {
+  userId: Types.ObjectId;
+  title: string;
+  totalCount: number;
+  score: number;
+  sessions: Session[];
+}
+
+export interface ResumeMethods {
+  toJSON(): any;
+}
+
+export type ResumeDoc = HydratedDocument<Resume, ResumeMethods>;
+export type ResumeModel = Model<Resume, {}, ResumeMethods>;
 
 const itemSchema = new Schema({
   title: { type: String, default: "title" },
@@ -20,20 +49,25 @@ const sessionSchema = new Schema({
   wordCount: { type: Number, default: 0 },
 }, { _id: false });
 
-const resumeSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  title: { type: String, required: true, default: "title" },
-  totalCount: { type: Number, default: 0 },
-  score: { type: Number, default: 0 },
-  sessions: { type: [sessionSchema], default: [] },
-}, { timestamps: true });
+const resumeSchema = new Schema<Resume, ResumeModel, ResumeMethods>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    title: { type: String, required: true, default: "title" },
+    totalCount: { type: Number, default: 0 },
+    score: { type: Number, default: 0 },
+    sessions: { type: [sessionSchema], default: [] },
+  },
+  { timestamps: true }
+);
 
 resumeSchema.methods.toJSON = function () {
-  const obj = this.toObject();
+  const obj = this.toObject() as any;
   obj.id = obj._id;
   delete obj._id;
   delete obj.__v;
   return obj;
 };
 
-module.exports = mongoose.model("Resume", resumeSchema);
+const Resume = model<Resume, ResumeModel>("Resume", resumeSchema);
+export default Resume;
+export { Resume };

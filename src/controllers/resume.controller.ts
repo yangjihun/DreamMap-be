@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-const Resume = require("@models/Resume");
+import Resume from "@models/Resume";
 const pdfParse = require('pdf-parse');
 
 type SectionKey = 'intro' | 'body' | 'closing';
@@ -57,12 +57,11 @@ const resumeController = {
         }
         threeSessions(resume);
 
-        const session = resume.sessions.find((i:any) => i.key === sessionKey);
-        if (!session) {
-          resume.sessions.push({key:sessionKey, title: sessionKey, items: [], wordCount: 0})
+        let target = resume.sessions.find((s: any) => s.key === sessionKey);
+        if (!target) {
+          target = {key: sessionKey, title: titleMap[sessionKey], items: [], wordCount: 0};
+          resume.sessions.push(target);
         }
-
-        const target = resume.sessions.find((s: any) => s.key === sessionKey);
         target.items.push({title: itemTitle, text, startDate, endDate, review});
         
         await resume.save();
@@ -72,38 +71,25 @@ const resumeController = {
     }
   },
 
-  // uploadPdf: async (req: Request, res: Response) => {
-  //   try{
-  //     const {userId} = req as Request & {userId: string};
-  //     const file = (req as any).file as Express.Multer.File | undefined;
-  //     const {sessionKey = "body", itemTitle = "PDF에서 추출한 텍스트"} = req.body as {
-  //       sessionKey?: 'intro' | 'body' | 'closing';
-  //       itemTitle?:string;
-  //     };
-
-  //     if (!file) {
-  //       throw new Error('file이 없습니다');
-  //     }
-
-  //     // text 추출
-  //     const parsed = await pdfParse(file.buffer);
-  //     const text: string = parsed?.text?.trim() || '';
-
-  //     if (!text) {
-  //       throw new Error('pdf에서 텍스트를 추출하지 못했습니다.');
-  //     }
-
-  //     let resume = await Resume.findOne({userId});
-  //   } catch (error: any) {
-  //     res.status(400).json({status:'fail', error:error.message});
-  //   }
-  // },
-
-  getResume: async (req: Request, res: Response) => {
+  getResumeById: async (req: Request, res: Response) => {
     try {
-        const {userId} = req as Request & {userId: string};
-        const resumeDoc = await Resume.findOne({userId});
+        const resumeId = req.params.id;
+        const resumeDoc = await Resume.findById(resumeId);
+        if (!resumeDoc) {
+          return res.status(404).json({status:'fail', error:'Resume not found'});
+        }
         res.status(200).json({status: "success", data: resumeDoc});
+    } catch(error: any) {
+      res.status(400).json({status:'fail',error:error.message});
+    }
+  },
+
+  getUserResumes: async (req: Request, res: Response) => {
+    try {        
+        // const {userId} = req as Request & {userId: string};
+        const userId = "66c3c1a9f53a8f0a6d2a7c11";
+        const resumeDocs = await Resume.find({userId});
+        res.status(200).json({status: "success", data: resumeDocs});
     } catch(error: any) {
       res.status(400).json({status:'fail',error:error.message});
     }
