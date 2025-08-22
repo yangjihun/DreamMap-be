@@ -23,9 +23,6 @@ const geminiController = {
     location: String;
     interestJob: String;
   }) => {
-    if (!location || !interestJob)
-      throw new Error("location 또는 interestJob이 없습니다.");
-
     const aiResponse = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: roadmapPrompt(location, interestJob), // 명령문

@@ -23,6 +23,9 @@ const roadmapController = {
       const { major, career, skill, region, interestJob, level } = user;
 
       // 3. 유저데이터와 이력서 내용(sessions) gemini controller로 보내기
+      if (!region || !interestJob)
+        throw new Error("region 또는 interestJob이 없습니다.");
+
       const roadmapData = await geminiController.generateRoadmapContent({
         location: region,
         interestJob: interestJob,
