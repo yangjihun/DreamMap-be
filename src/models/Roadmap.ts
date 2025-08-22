@@ -22,7 +22,7 @@ const pathSchema = new Schema(
 
 const roadmapSchema = new Schema(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    resumeId: { type: Schema.Types.ObjectId, ref: "Resume", required: true },
     plan: {
       type: String,
       enum: ["3months", "6months", "1year"],
