@@ -1,3 +1,87 @@
-const geminiController = {};
+import { GoogleGenAI, Type } from "@google/genai";
+import { Request, Response } from "express";
+import config from "@config/config";
+import {
+  roadmapPrompt,
+  introItemPrompt,
+  experienceItemPrompt,
+  projectItemPrompt,
+  skillItemPrompt,
+} from "@utils/aiPromptMessage";
+import { roadmapGeminiSchema } from "@utils/geminiResSchema";
+const Resume = require("@models/Resume");
+
+const ai = new GoogleGenAI({
+  apiKey: config.gemini.apiKey,
+});
+
+const geminiController = {
+  generateRoadmapContent: async ({
+    location,
+    interestJob,
+  }: {
+    location: String;
+    interestJob: String;
+  }) => {
+    const aiResponse = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: roadmapPrompt(location, interestJob), // 명령문
+      config: {
+        thinkingConfig: {
+          thinkingBudget: 0, // Disables thinking -> 속도개선
+        },
+        systemInstruction:
+          "당신은 커리어 로드맵 설계와 지역 맞춤 학습자료 큐레이션에 특화된 전문가입니다.",
+        responseMimeType: "application/json",
+        responseSchema: roadmapGeminiSchema,
+      },
+    });
+    if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
+
+    const formatData = JSON.parse(aiResponse.text);
+    const mappedData = formatData.map((item: any) => ({
+      period: item.period,
+      paths: item.plan.paths,
+    }));
+    return mappedData;
+  },
+  generateReview: async (req: Request, res: Response) => {
+    try {
+      let item;
+      let resume = await Resume.findById("68a7b8d77433cbd888394172");
+      if (!resume) {
+        throw new Error("resume not found");
+      }
+      for (let i = 0; i < resume.sessions.length; i++) {
+        for (let j = 0; j < resume.sessions[i].items.length; j++) {
+          let sessionTitle = resume.sessions[i].title;
+          item = resume.sessions[i].items[j];
+          let prompt;
+          if (sessionTitle === "Introduction") {
+            prompt = introItemPrompt(item);
+          } else if (sessionTitle === "Work Experience") {
+            prompt = experienceItemPrompt(item);
+          } else if (sessionTitle === "Project") {
+            prompt = projectItemPrompt(item);
+          } else if (sessionTitle === "Skills") {
+            prompt = skillItemPrompt(item);
+          } else {
+            prompt = introItemPrompt(item); // fallback
+          }
+          const aiResponse = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+          });
+          console.log(">>>>>>", aiResponse.text);
+          item.review = aiResponse.text;
+        }
+      }
+      await resume.save();
+      return res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", message: error.message });
+    }
+  },
+};
 
 export default geminiController;

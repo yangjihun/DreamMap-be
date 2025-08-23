@@ -1,4 +1,3 @@
-// src/repos/user.repo.ts
 import User from "@models/User";
 
 export type CreateUserInput = {

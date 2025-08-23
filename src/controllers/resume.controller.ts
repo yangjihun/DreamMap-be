@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-const Resume = require("@models/Resume");
+import Resume from "@models/Resume";
 const pdfParse = require('pdf-parse');
 
 type SectionKey = 'intro' | 'body' | 'closing';
@@ -57,12 +57,11 @@ const resumeController = {
         }
         threeSessions(resume);
 
-        const session = resume.sessions.find((i:any) => i.key === sessionKey);
-        if (!session) {
-          resume.sessions.push({key:sessionKey, title: sessionKey, items: [], wordCount: 0})
+        let target = resume.sessions.find((s: any) => s.key === sessionKey);
+        if (!target) {
+          target = {key: sessionKey, title: titleMap[sessionKey], items: [], wordCount: 0};
+          resume.sessions.push(target);
         }
-
-        const target = resume.sessions.find((s: any) => s.key === sessionKey);
         target.items.push({title: itemTitle, text, startDate, endDate, review});
         
         await resume.save();
@@ -72,38 +71,168 @@ const resumeController = {
     }
   },
 
-  // uploadPdf: async (req: Request, res: Response) => {
-  //   try{
-  //     const {userId} = req as Request & {userId: string};
-  //     const file = (req as any).file as Express.Multer.File | undefined;
-  //     const {sessionKey = "body", itemTitle = "PDF에서 추출한 텍스트"} = req.body as {
-  //       sessionKey?: 'intro' | 'body' | 'closing';
-  //       itemTitle?:string;
-  //     };
-
-  //     if (!file) {
-  //       throw new Error('file이 없습니다');
-  //     }
-
-  //     // text 추출
-  //     const parsed = await pdfParse(file.buffer);
-  //     const text: string = parsed?.text?.trim() || '';
-
-  //     if (!text) {
-  //       throw new Error('pdf에서 텍스트를 추출하지 못했습니다.');
-  //     }
-
-  //     let resume = await Resume.findOne({userId});
-  //   } catch (error: any) {
-  //     res.status(400).json({status:'fail', error:error.message});
-  //   }
-  // },
-
-  getResume: async (req: Request, res: Response) => {
+  getResumeById: async (req: Request, res: Response) => {
     try {
-        const {userId} = req as Request & {userId: string};
-        const resumeDoc = await Resume.findOne({userId});
+        const resumeId = req.params.id;
+        const resumeDoc = await Resume.findById(resumeId);
+        if (!resumeDoc) {
+          return res.status(404).json({status:'fail', error:'Resume not found'});
+        }
         res.status(200).json({status: "success", data: resumeDoc});
+    } catch(error: any) {
+      res.status(400).json({status:'fail',error:error.message});
+    }
+  },
+
+      getUserResumes: async (req: Request, res: Response) => {
+        try {        
+            // const {userId} = req as Request & {userId: string};
+            const userId = "66c3c1a9f53a8f0a6d2a7c11";
+            const resumeDocs = await Resume.find({userId});
+            res.status(200).json({status: "success", data: resumeDocs});
+        } catch(error: any) {
+          res.status(400).json({status:'fail',error:error.message});
+        }
+      },
+
+  // Resume 전체 삭제
+  deleteResume: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const deletedResume = await Resume.findByIdAndDelete(resumeId);
+      if (!deletedResume) {
+        return res.status(404).json({status:'fail', error:'Resume not found'});
+      }
+      res.status(200).json({status: "success", message: "Resume deleted successfully"});
+    } catch(error: any) {
+      res.status(400).json({status:'fail',error:error.message});
+    }
+  },
+
+  // Resume 기본 정보 수정 (title, score 등)
+  updateResumeTitle: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const { title } = req.body;
+      
+      const updateData: any = {};
+      if (title) updateData.title = title;
+      
+      const updatedResume = await Resume.findByIdAndUpdate(
+        resumeId, 
+        updateData, 
+        { new: true }
+      );
+      
+      if (!updatedResume) {
+        return res.status(404).json({status:'fail', error:'Resume not found'});
+      }
+      res.status(200).json({status: "success", data: updatedResume});
+    } catch(error: any) {
+      res.status(400).json({status:'fail',error:error.message});
+    }
+  },
+
+  // Session 삭제 (session의 모든 items 삭제)
+  deleteSession: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const sessionKey = req.params.sessionKey as 'intro' | 'body' | 'closing';
+      
+      if (!['intro','body','closing'].includes(sessionKey)) {
+        throw new Error('sessionKey가 intro|body|closing 이 아닙니다');
+      }
+      
+      const resume = await Resume.findById(resumeId);
+      if (!resume) {
+        return res.status(404).json({status:'fail', error:'Resume not found'});
+      }
+      
+      // 해당 session의 items를 빈 배열로 만들기
+      const targetSession = resume.sessions.find((s: any) => s.key === sessionKey);
+      if (targetSession) {
+        targetSession.items = [];
+        targetSession.wordCount = 0;
+      }
+      
+      await resume.save();
+      res.status(200).json({status: "success", message: "Session cleared successfully"});
+    } catch(error: any) {
+      res.status(400).json({status:'fail',error:error.message});
+    }
+  },
+
+  // 특정 Item 삭제
+  deleteItem: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const itemIndex = parseInt(req.params.itemIndex);
+      const sessionKey = req.params.sessionKey as 'intro' | 'body' | 'closing';
+      
+      if (!['intro','body','closing'].includes(sessionKey)) {
+        throw new Error('sessionKey가 intro|body|closing 이 아닙니다');
+      }
+      
+      const resume = await Resume.findById(resumeId);
+      if (!resume) {
+        return res.status(404).json({status:'fail', error:'Resume not found'});
+      }
+      
+      const targetSession = resume.sessions.find((s: any) => s.key === sessionKey);
+      if (!targetSession) {
+        return res.status(404).json({status:'fail', error:'Session not found'});
+      }
+      
+      if (itemIndex < 0 || itemIndex >= targetSession.items.length) {
+        return res.status(404).json({status:'fail', error:'Item not found'});
+      }
+      
+      // 해당 인덱스의 item 삭제
+      targetSession.items.splice(itemIndex, 1);
+      
+      await resume.save();
+      res.status(200).json({status: "success", message: "Item deleted successfully"});
+    } catch(error: any) {
+      res.status(400).json({status:'fail',error:error.message});
+    }
+  },
+
+  // 특정 Item 수정
+  updateItem: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const itemIndex = parseInt(req.params.itemIndex);
+      const sessionKey = req.params.sessionKey as 'intro' | 'body' | 'closing';
+      const { title, text, startDate, endDate, review } = req.body;
+      
+      if (!['intro','body','closing'].includes(sessionKey)) {
+        throw new Error('sessionKey가 intro|body|closing 이 아닙니다');
+      }
+      
+      const resume = await Resume.findById(resumeId);
+      if (!resume) {
+        return res.status(404).json({status:'fail', error:'Resume not found'});
+      }
+      
+      const targetSession = resume.sessions.find((s: any) => s.key === sessionKey);
+      if (!targetSession) {
+        return res.status(404).json({status:'fail', error:'Session not found'});
+      }
+      
+      if (itemIndex < 0 || itemIndex >= targetSession.items.length) {
+        return res.status(404).json({status:'fail', error:'Item not found'});
+      }
+      
+      // 해당 인덱스의 item 수정
+      const item = targetSession.items[itemIndex];
+      if (title !== undefined) item.title = title;
+      if (text !== undefined) item.text = text;
+      if (startDate !== undefined) item.startDate = startDate;
+      if (endDate !== undefined) item.endDate = endDate;
+      if (review !== undefined) item.review = review;
+      
+      await resume.save();
+      res.status(200).json({status: "success", data: item});
     } catch(error: any) {
       res.status(400).json({status:'fail',error:error.message});
     }
