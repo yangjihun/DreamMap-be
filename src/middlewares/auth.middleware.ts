@@ -4,7 +4,7 @@ import config from "@config/config";
 import User from "@models/User";
 
 interface TokenPayload extends JwtPayload {
-  _id: string;
+  id: string;
 }
 
 // 라우트 핸들러에서 req.userId를 쓰고 싶다면 이렇게 확장 타입을 사용
@@ -19,8 +19,8 @@ export const authenticate = (req: AuthedRequest, res: Response, next: NextFuncti
 
     const token = tokenString.replace("Bearer ", "");
     const payload = jwt.verify(token, config.jwt.secret!) as TokenPayload;
-
-    req.userId = payload._id;
+    
+    req.userId = payload.id;
     return next();
   } catch (err) {
     return next(err);
