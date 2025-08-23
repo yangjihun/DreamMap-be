@@ -20,6 +20,7 @@ export interface Resume {
   title: string;
   totalCount: number;
   score: number;
+  starred: boolean;
   sessions: Session[];
 }
 
@@ -55,6 +56,7 @@ const resumeSchema = new Schema<Resume, ResumeModel, ResumeMethods>(
     title: { type: String, required: true, default: "title" },
     totalCount: { type: Number, default: 0 },
     score: { type: Number, default: 0 },
+    starred: { type: Boolean, default: false },
     sessions: { type: [sessionSchema], default: [] },
   },
   { timestamps: true }
