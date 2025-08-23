@@ -46,6 +46,16 @@ const userSchema = new Schema<User, UserModel, UserMethods>(
   { timestamps: true }
 );
 
+userSchema.methods.toJSON = function () {
+  const obj = this.toObject() as any;
+  obj.id = obj._id;
+  delete obj.password;
+  delete obj.updatedAt;
+  delete obj.createdAt;
+  delete obj.__v;
+  return obj;
+  };
+
 /** 인스턴스 메서드 */
 userSchema.methods.generateToken = function (this: UserDoc): string {
   if (!jwtCfg.secret) {
@@ -59,9 +69,3 @@ userSchema.methods.generateToken = function (this: UserDoc): string {
 
 const User = model<User, UserModel>("User", userSchema);
 export default User;
-
-
-
-
-
-
