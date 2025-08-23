@@ -9,7 +9,7 @@ import {
   skillItemPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
-const Resume = require("@models/Resume");
+import Resume from "@models/Resume";
 
 const ai = new GoogleGenAI({
   apiKey: config.gemini.apiKey,
@@ -48,7 +48,8 @@ const geminiController = {
   generateReview: async (req: Request, res: Response) => {
     try {
       let item;
-      let resume = await Resume.findById("68a7b8d77433cbd888394172");
+      const resumeId = req.params.id;
+      let resume = await Resume.findById(resumeId);
       if (!resume) {
         throw new Error("resume not found");
       }
