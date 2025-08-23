@@ -22,6 +22,8 @@ export interface Resume {
   score: number;
   starred: boolean;
   sessions: Session[];
+  status: string;
+  lastModified: string;
 }
 
 export interface ResumeMethods {
@@ -31,24 +33,30 @@ export interface ResumeMethods {
 export type ResumeDoc = HydratedDocument<Resume, ResumeMethods>;
 export type ResumeModel = Model<Resume, {}, ResumeMethods>;
 
-const itemSchema = new Schema({
-  title: { type: String, default: "title" },
-  text: { type: String, required: true },
-  startDate: { type: String },
-  endDate: { type: String },
-  review: { type: String },
-}, { _id: false });
-
-const sessionSchema = new Schema({
-  key: { 
-    type: String, 
-    required: true, 
-    enum: ['intro', 'body', 'closing']
+const itemSchema = new Schema(
+  {
+    title: { type: String, default: "title" },
+    text: { type: String, required: true },
+    startDate: { type: String },
+    endDate: { type: String },
+    review: { type: String },
   },
-  title: { type: String, required: true },
-  items: { type: [itemSchema], default: [] },
-  wordCount: { type: Number, default: 0 },
-}, { _id: false });
+  { _id: false }
+);
+
+const sessionSchema = new Schema(
+  {
+    key: {
+      type: String,
+      required: true,
+      enum: ["intro", "body", "closing"],
+    },
+    title: { type: String, required: true },
+    items: { type: [itemSchema], default: [] },
+    wordCount: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
 
 const resumeSchema = new Schema<Resume, ResumeModel, ResumeMethods>(
   {
@@ -58,6 +66,8 @@ const resumeSchema = new Schema<Resume, ResumeModel, ResumeMethods>(
     score: { type: Number, default: 0 },
     starred: { type: Boolean, default: false },
     sessions: { type: [sessionSchema], default: [] },
+    status: { type: String, default: "draft" },
+    lastModified: { type: String, default: "2024년 1월 15일" },
   },
   { timestamps: true }
 );
