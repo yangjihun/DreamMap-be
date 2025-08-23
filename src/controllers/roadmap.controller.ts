@@ -42,6 +42,18 @@ const roadmapController = {
       res.status(400).json({ status: "fail", error: error.message });
     }
   },
+
+  getRoadmap: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const roadmap = await Roadmap.findOne({ resumeId });
+      if (!roadmap) throw new Error("not found roadmap");
+
+      res.status(200).json({ status: "success", data: roadmap });
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", error: error.message });
+    }
+  },
 };
 
 export default roadmapController;
