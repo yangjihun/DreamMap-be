@@ -4,7 +4,7 @@ import {uploadPdf, pdfToText} from "@middlewares/upload";
 import { authenticate } from "@middlewares/auth.middleware";
 const router = express.Router();
 // userId 받아오는 미들웨어 추가 예정
-// 새 Resume 생성 (섹션별 입력)
+// 새 Resume 생성 (섹션별 입력) 섹션 나누는 기능 생기면 변경 예정
 router.post("/new/sections", authenticate, resumeController.createNewResumeWithSections);
 
 // 새 Resume 생성
@@ -18,7 +18,7 @@ router.get("/:id", authenticate, resumeController.getResumeById);
 router.put("/:id", authenticate, resumeController.updateResumeTitle);
 router.put("/:id/star", authenticate, resumeController.toggleStarred);
 
-// Resume에 아이템 추가 (통합)
+// Resume에 아이템 추가
 router.post("/:id/item", authenticate, resumeController.addItemToResume);
 
 // Session 제목 수정 (resumeId, sessionKey)
