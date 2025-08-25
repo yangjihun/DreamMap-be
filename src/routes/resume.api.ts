@@ -3,7 +3,7 @@ import resumeController from "@controllers/resume.controller";
 import {uploadPdf, pdfToText} from "@middlewares/upload";
 import { authenticate } from "@middlewares/auth.middleware";
 const router = express.Router();
-// userId 받아오는 미들웨어 추가 예정
+
 // 새 Resume 생성 (섹션별 입력) 섹션 나누는 기능 생기면 변경 예정
 router.post("/new/sections", authenticate, resumeController.createNewResumeWithSections);
 
@@ -14,22 +14,16 @@ router.post("/new", authenticate, uploadPdf, pdfToText, resumeController.createN
 router.get("/all", authenticate, resumeController.getUserResumes);
 router.get("/:id", authenticate, resumeController.getResumeById);
 
-// Resume 수정
-router.put("/:id", authenticate, resumeController.updateResumeTitle);
+// 즐겨찾기 수정
 router.put("/:id/star", authenticate, resumeController.toggleStarred);
 
-// Resume에 아이템 추가
-router.post("/:id/item", authenticate, resumeController.addItemToResume);
-
-// Session 제목 수정 (resumeId, sessionKey)
-router.put("/:id/session/:sessionKey", authenticate, resumeController.updateSessionTitle);
-
-// 특정 Item 수정 (resumeId, sessionKey, itemIndex)
-router.put("/:id/session/:sessionKey/item/:itemIndex", authenticate, resumeController.updateItem);
-
+// Resume 수정
 router.patch("/:id", authenticate, resumeController.patchResume);
 
-// Resume 전체 삭제 (resumeId)
+// session 삭제
+router.delete("/:id/session/:sessionKey", authenticate, resumeController.deleteSession);
+
+// Resume 삭제 (resumeId)
 router.delete("/:id", authenticate, resumeController.deleteResume);
 
 export default router;

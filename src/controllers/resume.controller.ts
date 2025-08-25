@@ -4,7 +4,7 @@ import Resume from "@models/Resume";
 function ensureSession(resume: any, key: string, defaultTitle?: string) {
   let session = resume.sessions.find((s: any) => s.key === key);
   if (!session) {
-    session = { key, title: defaultTitle ?? key, items: [] };
+    session = { key, title: defaultTitle ?? key, items: [], wordCount: 0 };
     resume.sessions.push(session);
   }
   return session;
@@ -20,12 +20,22 @@ function sanitizeItem(item: any) {
   };
 }
 
+function sanitizeSession(s: any) {
+  const key = String(s?.key ?? "");
+  const title = String(s?.title ?? key);
+  const items = Array.isArray(s?.items) ? s.items.map(sanitizeItem) : [];
+  const wordCount =
+    typeof s?.wordCount === "number"
+      ? s.wordCount
+      : items.reduce((a: number, it: { text?: string }) => a + (it.text?.length || 0), 0);
+  return { key, title, items, wordCount };
+}
+
 const resumeController = {
-  //------------------------
   patchResume: async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { title, starred, score, sessions } = req.body ?? {};
+      const { title, starred, score, sessions, replaceSessions } = req.body ?? {};
 
       const resume = await Resume.findById(id);
       if (!resume) throw new Error("Resume not found");
@@ -34,19 +44,24 @@ const resumeController = {
       if (typeof starred === "boolean") resume.starred = starred;
       if (typeof score === "number") resume.score = score;
 
-      // 세션 upsert + items 배열 통째 교체
       if (Array.isArray(sessions)) {
-        for (const s of sessions) {
-          const key = String(s?.key ?? "");
-          if (!key) continue;
-
-          const session = ensureSession(resume, key, s?.title);
-          if (typeof s?.title !== "undefined") {
-            session.title = String(s.title);
-          }
-
-          if (Array.isArray(s?.items)) {
-            session.items = s.items.map(sanitizeItem);
+        if (replaceSessions) {
+          (resume as any).sessions = (sessions as any[]).map(sanitizeSession) as any;
+        } else {
+          for (const s of sessions) {
+            const key = String(s?.key ?? "");
+            if (!key) continue;
+            const session = ensureSession(resume, key, s?.title);
+            if (typeof s?.title !== "undefined") {
+              session.title = String(s.title);
+            }
+            if (Array.isArray(s?.items)) {
+              session.items = s.items.map(sanitizeItem);
+              session.wordCount = session.items.reduce(
+                (a: number, it: { text?: string }) => a + (it.text?.length || 0),
+                0
+              );
+            }
           }
         }
       }
@@ -57,172 +72,174 @@ const resumeController = {
       return res.status(400).json({ status: "fail", error: error.message });
     }
   },
-  //--------------------------------
+
+  deleteSession: async (req: Request, res: Response) => {
+    try {
+      const { id, sessionKey } = req.params as { id: string; sessionKey: string };
+      const resume = await Resume.findById(id);
+      if (!resume) throw new Error("Resume not found");
+      const before = resume.sessions.length;
+      resume.sessions = resume.sessions.filter((s: any) => s.key !== sessionKey);
+      if (resume.sessions.length === before) throw new Error("Session not found");
+      await resume.save();
+      return res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
+    }
+  },
   createNewResumeWithSections: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
       const { resumeTitle = "새 이력서", sections } = req.body;
-      
+
       if (!Object.values(sections || {}).some((s: any) => s?.text?.trim())) {
-        throw new Error('적어도 하나의 섹션에는 내용을 입력해야 합니다');
+        throw new Error("적어도 하나의 섹션에는 내용을 입력해야 합니다");
       }
 
       const resume = new Resume({ userId, title: resumeTitle, sessions: [] });
 
       Object.entries(sections || {}).forEach(([key, content]: [string, any]) => {
         if (content?.text?.trim()) {
-          const session = resume.sessions.find((s: any) => s.key === key);
-          if (session) {
+          let session = resume.sessions.find((s: any) => s.key === key);
+
+          if (!session) {
+            session = {
+              key,
+              title: content.title || key,
+              items: [
+                {
+                  title: content.title || "title",
+                  text: content.text,
+                  startDate: undefined,
+                  endDate: undefined,
+                  review: undefined,
+                },
+              ],
+              wordCount: content.text.length,
+            };
+            resume.sessions.push(session);
+          } else {
             session.items.push({
               title: content.title || "title",
               text: content.text,
               startDate: undefined,
               endDate: undefined,
-              review: undefined
+              review: undefined,
             });
+
+            session.wordCount = session.items.reduce(
+              (a: number, it: { text?: string }) => a + (it.text?.length || 0),
+              0
+            );
           }
         }
       });
-      
+
+
       await resume.save();
-      res.status(200).json({ status: 'success', data: resume });
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
+      res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
     }
   },
 
   createNewResume: async (req: Request, res: Response) => {
     try {
-      const { text, sessionKey, itemTitle = "title", startDate, endDate, review, resumeTitle = "새 이력서" } = req.body;
+      const {
+        text,
+        sessionKey,
+        itemTitle = "title",
+        startDate,
+        endDate,
+        review,
+        resumeTitle = "새 이력서",
+      } = req.body;
+
       const userId = (req as Request & { userId?: string }).userId;
-      if (!text) throw new Error('text를 입력하지 않았습니다');
+      if (!text?.trim()) throw new Error("text를 입력하지 않았습니다");
 
       const resume = new Resume({ userId, title: resumeTitle, sessions: [] });
+      const key = (sessionKey || "general").trim();
 
-      const target = resume.sessions.find((s: any) => s.key === sessionKey);
-      target?.items.push({title: itemTitle, text, startDate, endDate, review});
-      
+      const newItem = {
+        title: itemTitle,
+        text,
+        startDate,
+        endDate,
+        review,
+      };
+
+      let session = resume.sessions.find((s: any) => s.key === key);
+
+      if (!session) {
+        session = {
+          key,
+          title: itemTitle || key,
+          items: [newItem],
+          wordCount: text.length,
+        };
+        resume.sessions.push(session);
+      } else {
+        session.items.push(newItem);
+        session.wordCount = session.items.reduce(
+          (a: number, it: { text?: string }) => a + (it.text?.length || 0),
+          0
+        );
+      }
       await resume.save();
-      res.status(200).json({ status: 'success', data: resume });
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
+      res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
     }
   },
 
   getResumeById: async (req: Request, res: Response) => {
     try {
       const resume = await Resume.findById(req.params.id);
-      if (!resume) throw new Error('Resume not found');
-      res.status(200).json({status: "success", data: resume});
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
+      if (!resume) throw new Error("Resume not found");
+      res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
     }
   },
 
   getUserResumes: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
-      const resumes = await Resume.find({userId});
-      res.status(200).json({status: "success", data: resumes});
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
+      const resumes = await Resume.find({ userId });
+      res.status(200).json({ status: "success", data: resumes });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
     }
   },
 
   deleteResume: async (req: Request, res: Response) => {
     try {
       const deleted = await Resume.findByIdAndDelete(req.params.id);
-      if (!deleted) throw new Error('Resume not found');
-      res.status(200).json({status: "success", message: "Resume deleted successfully"});
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
-    }
-  },
-
-  updateResumeTitle: async (req: Request, res: Response) => {
-    try {
-      const { title } = req.body;
-      const updated = await Resume.findByIdAndUpdate(req.params.id, {title}, {new: true});
-      if (!updated) throw new Error('Resume not found');
-      res.status(200).json({status: "success", data: updated});
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
-    }
-  },
-
-  updateItem: async (req: Request, res: Response) => {
-    try {
-      const { sessionKey, itemIndex } = req.params;
-      const index = parseInt(itemIndex);
-      const { title, text, startDate, endDate, review } = req.body;
-      
-      const resume = await Resume.findById(req.params.id);
-      if (!resume) throw new Error('Resume not found');
-      
-      const session = resume.sessions.find((s: any) => s.key === sessionKey);
-      if (!session)  throw new Error('Session not found');
-      if (index < 0 || index >= session.items.length)  throw new Error('Item not found');
-      
-      const item = session.items[index];
-      Object.assign(item, { title, text, startDate, endDate, review });
-      
-      await resume.save();
-      res.status(200).json({status: "success", data: item});
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
-    }
-  },
-
-  updateSessionTitle: async (req: Request, res: Response) => {
-    try {
-      const { sessionKey } = req.params;
-      const { title } = req.body;
-      if (!title?.trim()) throw new Error('title이 필요합니다');
-      
-      const resume = await Resume.findById(req.params.id);
-      if (!resume)  throw new Error('Resume not found');
-      
-      const session = resume.sessions.find((s: any) => s.key === sessionKey);
-      if (!session) throw new Error('Session not found');
-      
-      session.title = title.trim();
-      await resume.save();
-      res.status(200).json({status: "success", data: { sessionKey, title: session.title }});
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
+      if (!deleted) throw new Error("Resume not found");
+      res
+        .status(200)
+        .json({ status: "success", message: "Resume deleted successfully" });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
     }
   },
 
   toggleStarred: async (req: Request, res: Response) => {
     try {
       const resume = await Resume.findById(req.params.id);
-      if (!resume) throw new Error('Resume not found');
-      
+      if (!resume) throw new Error("Resume not found");
+
       resume.starred = !resume.starred;
       await resume.save();
-      res.status(200).json({status: "success", data: { id: req.params.id, starred: resume.starred }});
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
+      res.status(200).json({
+        status: "success",
+        data: { id: req.params.id, starred: resume.starred },
+      });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
     }
   },
-
-  addItemToResume: async (req: Request, res: Response) => {
-    try {
-      const { text, sessionKey, itemTitle = "새 항목", startDate, endDate, review } = req.body;
-      if (!text) throw new Error('text를 입력하지 않았습니다');
-
-      const resume = await Resume.findById(req.params.id);
-      if (!resume) throw new Error('Resume not found');
-
-      const session = resume.sessions.find((s: any) => s.key === sessionKey);
-      session?.items.push({title: itemTitle, text, startDate, endDate, review});
-      
-      await resume.save();
-      res.status(200).json({ status: 'success', data: resume });
-    } catch(error: any) {
-      return res.status(400).json({status: 'fail', error: error.message});
-    }
-  }
 };
 
 export default resumeController;
