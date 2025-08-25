@@ -15,7 +15,7 @@ export const roadmapPrompt = (location: String, interestJob: String) =>
 - location과 언어/시간대/접근성을 우선.
 - 각 단계 최소 1개, 최대 2개 resource.
 - 추천 리소스는 interestJob과 관련.
-- location은 시/군/구 또는 "Online" 명시.
+- location은 시/군/구 또는 "온라인" 명시.
 - price는 통화 기호 포함, 모르면 "N/A".
 - rating은 1~5 소수점 허용, 모르면 null.
 - provider는 기관/주관사/플랫폼명.

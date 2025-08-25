@@ -20,6 +20,7 @@ const roadmapController = {
 
       // 2. resume에서 유저데이터 가져오기
       const user = resume.userId;
+      if (!user) throw new Error("not found user");
       const { major, career, skill, region, interestJob, level } = user;
 
       // 3. 유저데이터와 이력서 내용(sessions) gemini controller로 보내기
