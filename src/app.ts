@@ -4,7 +4,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import indexRouter from "@routes/index";
 import config from "@config/config";
-import AppError from "@utils/AppError"; 
+import AppError from "@utils/appError"; 
 
 const app = express();
 app.use(cors());

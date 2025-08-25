@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import User, { UserDoc } from "@models/User"; 
 import userService from "@services/user.service";
-import AppError from "@utils/AppError"; 
+import AppError from "@utils/appError"; 
 
 // 반환 타입을 구체적인 UserDoc으로 변경
 type AuthResult = {
