@@ -38,18 +38,17 @@ const threeSessions = (resume: any) => {
   });
 };
 
-const getUserId = () => "66c3c1a9f53a8f0a6d2a7c11"; // 하드코딩
-
 const resumeController = {
   createNewResumeWithSections: async (req: Request, res: Response) => {
     try {
+      const userId = (req as Request & { userId?: string }).userId;
       const { resumeTitle = "새 이력서", sections } = req.body;
       
       if (!Object.values(sections || {}).some((s: any) => s?.text?.trim())) {
         throw new Error('적어도 하나의 섹션에는 내용을 입력해야 합니다');
       }
 
-      const resume = new Resume({ userId: getUserId(), title: resumeTitle, sessions: [] });
+      const resume = new Resume({ userId, title: resumeTitle, sessions: [] });
       threeSessions(resume);
 
       Object.entries(sections || {}).forEach(([key, content]: [string, any]) => {
@@ -77,11 +76,11 @@ const resumeController = {
   createNewResume: async (req: Request, res: Response) => {
     try {
       const { text, sessionKey, itemTitle = "title", startDate, endDate, review, resumeTitle = "새 이력서" } = req.body;
-      
+      const userId = (req as Request & { userId?: string }).userId;
       validateText(text);
       validateSessionKey(sessionKey);
 
-      const resume = new Resume({ userId: getUserId(), title: resumeTitle, sessions: [] });
+      const resume = new Resume({ userId, title: resumeTitle, sessions: [] });
       threeSessions(resume);
 
       const target = resume.sessions.find((s: any) => s.key === sessionKey);
@@ -106,7 +105,8 @@ const resumeController = {
 
   getUserResumes: async (req: Request, res: Response) => {
     try {
-      const resumes = await Resume.find({userId: getUserId()});
+      const userId = (req as Request & { userId?: string }).userId;
+      const resumes = await Resume.find({userId});
       res.status(200).json({status: "success", data: resumes});
     } catch(error: any) {
       handleError(res, error);
@@ -129,27 +129,6 @@ const resumeController = {
       const updated = await Resume.findByIdAndUpdate(req.params.id, {title}, {new: true});
       if (!updated) return handleNotFound(res, 'Resume not found');
       res.status(200).json({status: "success", data: updated});
-    } catch(error: any) {
-      handleError(res, error);
-    }
-  },
-
-  deleteSession: async (req: Request, res: Response) => {
-    try {
-      const { sessionKey } = req.params;
-      validateSessionKey(sessionKey);
-      
-      const resume = await Resume.findById(req.params.id);
-      if (!resume) return handleNotFound(res, 'Resume not found');
-      
-      const session = resume.sessions.find((s: any) => s.key === sessionKey);
-      if (session) {
-        session.items = [];
-        session.wordCount = 0;
-      }
-      
-      await resume.save();
-      res.status(200).json({status: "success", message: "Session cleared successfully"});
     } catch(error: any) {
       handleError(res, error);
     }
