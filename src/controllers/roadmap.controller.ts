@@ -31,6 +31,7 @@ const roadmapController = {
         location: region,
         interestJob: interestJob,
       });
+
       //   4. gemini res로 로드맵 생성
       const newRoadmap = new Roadmap({
         resumeId,
@@ -38,6 +39,14 @@ const roadmapController = {
       });
 
       await newRoadmap.save();
+
+      newRoadmap.plans.forEach((plan) =>
+        plan.paths.forEach((path) =>
+          path.resources.forEach((resource) => {
+            if (resource.price === "N/A") resource.price = "가격 정보 없음";
+          })
+        )
+      );
       res.status(200).json({ status: "success", data: newRoadmap });
     } catch (error: any) {
       res.status(400).json({ status: "fail", error: error.message });
@@ -50,13 +59,6 @@ const roadmapController = {
       const roadmap = await Roadmap.findOne({ resumeId });
       if (!roadmap) throw new Error("not found roadmap");
 
-      roadmap.plans.forEach((plan) =>
-        plan.paths.forEach((path) =>
-          path.resources.forEach((resource) => {
-            if (resource.price === "N/A") resource.price = "가격 정보 없음";
-          })
-        )
-      );
       res.status(200).json({ status: "success", data: roadmap });
     } catch (error: any) {
       res.status(400).json({ status: "fail", error: error.message });
