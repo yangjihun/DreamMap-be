@@ -9,7 +9,7 @@ export interface Item {
 }
 
 export interface Session {
-  key: "intro" | "body" | "closing";
+  key: string;
   title: string;
   items: Item[];
   wordCount: number;
@@ -49,7 +49,7 @@ const sessionSchema = new Schema(
     key: {
       type: String,
       required: true,
-      enum: ["intro", "body", "closing"],
+      trim: true,
     },
     title: { type: String, required: true },
     items: { type: [itemSchema], default: [] },

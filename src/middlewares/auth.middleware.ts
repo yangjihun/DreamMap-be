@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt, { JwtPayload, JsonWebTokenError } from "jsonwebtoken";
 import config from "@config/config";
 import User from "@models/User";
+import AppError from "@utils/appError";
 
 interface TokenPayload extends JwtPayload {
   id: string;
@@ -23,6 +24,11 @@ export const authenticate = (req: AuthedRequest, res: Response, next: NextFuncti
     req.userId = payload.id;
     return next();
   } catch (err) {
+    if (err instanceof JsonWebTokenError) {
+      // 토큰 관련 에러(유효하지 않은 토큰, 만료된 토큰 등)를 잡아서
+      // 401 상태 코드를 가진 AppError로 변환합니다.
+      return next(new AppError("유효하지 않은 토큰입니다.", 401));
+    }  
     return next(err);
   }
 };
