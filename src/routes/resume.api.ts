@@ -27,6 +27,8 @@ router.put("/:id/session/:sessionKey", authenticate, resumeController.updateSess
 // 특정 Item 수정 (resumeId, sessionKey, itemIndex)
 router.put("/:id/session/:sessionKey/item/:itemIndex", authenticate, resumeController.updateItem);
 
+router.patch("/:id", authenticate, resumeController.patchResume);
+
 // Resume 전체 삭제 (resumeId)
 router.delete("/:id", authenticate, resumeController.deleteResume);
 

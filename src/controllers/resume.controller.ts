@@ -1,7 +1,63 @@
 import { Request, Response } from "express";
 import Resume from "@models/Resume";
 
+function ensureSession(resume: any, key: string, defaultTitle?: string) {
+  let session = resume.sessions.find((s: any) => s.key === key);
+  if (!session) {
+    session = { key, title: defaultTitle ?? key, items: [] };
+    resume.sessions.push(session);
+  }
+  return session;
+}
+
+function sanitizeItem(item: any) {
+  return {
+    title: String(item?.title ?? "새 항목"),
+    text: String(item?.text ?? ""),
+    startDate: item?.startDate ?? undefined,
+    endDate: item?.endDate ?? undefined,
+    review: item?.review ?? undefined,
+  };
+}
+
 const resumeController = {
+  //------------------------
+  patchResume: async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { title, starred, score, sessions } = req.body ?? {};
+
+      const resume = await Resume.findById(id);
+      if (!resume) throw new Error("Resume not found");
+
+      if (typeof title !== "undefined") resume.title = String(title);
+      if (typeof starred === "boolean") resume.starred = starred;
+      if (typeof score === "number") resume.score = score;
+
+      // 세션 upsert + items 배열 통째 교체
+      if (Array.isArray(sessions)) {
+        for (const s of sessions) {
+          const key = String(s?.key ?? "");
+          if (!key) continue;
+
+          const session = ensureSession(resume, key, s?.title);
+          if (typeof s?.title !== "undefined") {
+            session.title = String(s.title);
+          }
+
+          if (Array.isArray(s?.items)) {
+            session.items = s.items.map(sanitizeItem);
+          }
+        }
+      }
+
+      await resume.save();
+      return res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      return res.status(400).json({ status: "fail", error: error.message });
+    }
+  },
+  //--------------------------------
   createNewResumeWithSections: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
