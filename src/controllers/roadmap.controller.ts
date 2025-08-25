@@ -50,6 +50,13 @@ const roadmapController = {
       const roadmap = await Roadmap.findOne({ resumeId });
       if (!roadmap) throw new Error("not found roadmap");
 
+      roadmap.plans.forEach((plan) =>
+        plan.paths.forEach((path) =>
+          path.resources.forEach((resource) => {
+            if (resource.price === "N/A") resource.price = "가격 정보 없음";
+          })
+        )
+      );
       res.status(200).json({ status: "success", data: roadmap });
     } catch (error: any) {
       res.status(400).json({ status: "fail", error: error.message });
