@@ -7,7 +7,7 @@ import {
   experienceItemPrompt,
   projectItemPrompt,
   skillItemPrompt,
-  resumePrompt,
+  itemPatchPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
@@ -74,7 +74,6 @@ const geminiController = {
             model: "gemini-2.5-flash",
             contents: prompt,
           });
-          console.log(">>>>>>", aiResponse.text);
           item.review = aiResponse.text;
         }
       }
@@ -86,7 +85,7 @@ const geminiController = {
   },
   generateResume: async (req: Request, res: Response) => {
     try {
-      const { userId, resumeId } = req.body;
+      const resumeId = req.params.id;
       let item;
       const resume = await Resume.findById(resumeId);
       if (!resume) throw new Error("Resume not found");
@@ -97,13 +96,32 @@ const geminiController = {
           item = resume.sessions[i].items[j];
           const aiResponse = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: resumePrompt(item),
+            contents: itemPatchPrompt(item),
           });
-          console.log(">>>>>>", aiResponse.text);
+
           if (aiResponse.text) {
+            item.oldText = item.text;
             item.text = aiResponse.text;
           }
         }
+      }
+      await resume.save();
+      return res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", message: error.message });
+    }
+  },
+  generateReviewWhole: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const resume = await Resume.findById(resumeId);
+      if (!resume) throw new Error("Resume not found");
+      const aiResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: resumeReviewPrompt(resume),
+      });
+      if (aiResponse.text) {
+        resume.review = aiResponse.text;
       }
       await resume.save();
       return res.status(200).json({ status: "success", data: resume });

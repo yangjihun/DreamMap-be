@@ -22,7 +22,19 @@ export const roadmapPrompt = (location: String, interestJob: String) =>
 - 중복 최소화.`;
 const items = require("@models/Resume");
 
-export const resumePrompt = (item: any) => `
+export const resumeReviewPrompt = (resume: any) => `
+아래는 유저의 리쥬메이다.
+${resume.title}
+${resume.sessions
+  .map((session: any) =>
+    session.items.map((item: any) => item.title).join(", ")
+  )
+  .join(", ")}
+
+이 리쥬메를 평가하라. 최대 1000자 이내로 작성하라.
+`;
+
+export const itemPatchPrompt = (item: any) => `
 아래는 유저의 리쥬메의 한 섹션의 한 항목이다.
 ${item.title}
 ${item.text}
@@ -30,7 +42,9 @@ ${item.text}
 그리고 아래는 이 세션에 대한 피드백이다.
 ${item.review}
 
-피드백을 넣어서 이 파트를 수정하라.
+피드백을 넣어서 이 파트를 수정하라. 단 너의 서술은 제거하라. 또한 제목도 제거하라(예:${item.title}).
+그리고 *은 빼고 똑같이 bullet point(•) 로 생성하라. 또는 너가 생각하기에 적합한 개수의 bullet point로 생성하라.
+무엇보다도 간략하고 파워풀하게 생성하라. 줄바꿈은 최대 한줄로 하라.
 
 `;
 
