@@ -15,12 +15,24 @@ export const roadmapPrompt = (location: String, interestJob: String) =>
 - location과 언어/시간대/접근성을 우선.
 - 각 단계 최소 1개, 최대 2개 resource.
 - 추천 리소스는 interestJob과 관련.
-- location은 시/군/구 또는 "Online" 명시.
+- location은 시/군/구 또는 "온라인" 명시.
 - price는 통화 기호 포함, 모르면 "N/A".
 - rating은 1~5 소수점 허용, 모르면 null.
 - provider는 기관/주관사/플랫폼명.
 - 중복 최소화.`;
 const items = require("@models/Resume");
+
+export const resumePrompt = (item: any) => `
+아래는 유저의 리쥬메의 한 섹션의 한 항목이다.
+${item.title}
+${item.text}
+
+그리고 아래는 이 세션에 대한 피드백이다.
+${item.review}
+
+피드백을 넣어서 이 파트를 수정하라.
+
+`;
 
 export const introItemPrompt = (item: any) =>
   `너는 IT 기업의 시니어 채용 담당자다.  

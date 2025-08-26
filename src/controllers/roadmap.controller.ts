@@ -20,6 +20,7 @@ const roadmapController = {
 
       // 2. resume에서 유저데이터 가져오기
       const user = resume.userId;
+      if (!user) throw new Error("not found user");
       const { major, career, skill, region, interestJob, level } = user;
 
       // 3. 유저데이터와 이력서 내용(sessions) gemini controller로 보내기
@@ -30,6 +31,7 @@ const roadmapController = {
         location: region,
         interestJob: interestJob,
       });
+
       //   4. gemini res로 로드맵 생성
       const newRoadmap = new Roadmap({
         resumeId,
@@ -37,7 +39,47 @@ const roadmapController = {
       });
 
       await newRoadmap.save();
+
+      newRoadmap.plans.forEach((plan) =>
+        plan.paths.forEach((path) =>
+          path.resources.forEach((resource) => {
+            if (resource.price === "N/A") resource.price = "가격 정보 없음";
+          })
+        )
+      );
       res.status(200).json({ status: "success", data: newRoadmap });
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", error: error.message });
+    }
+  },
+
+  getRoadmap: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      const roadmap = await Roadmap.findOne({ resumeId });
+      if (!roadmap) throw new Error("not found roadmap");
+
+      res.status(200).json({ status: "success", data: roadmap });
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", error: error.message });
+    }
+  },
+
+  toggleComplete: async (req: Request, res: Response) => {
+    try {
+      const { resumeId, resourceId } = req.params;
+      const roadmap = await Roadmap.findOne({ resumeId });
+      if (!roadmap) throw new Error("not found roadmap");
+      roadmap.plans.forEach((plan) => {
+        plan.paths.forEach((path) => {
+          const resource = path.resources.find(
+            (resource) => resource._id.toString() === resourceId
+          );
+          if (resource) resource.isComplete = !resource.isComplete;
+        });
+      });
+      await roadmap.save();
+      res.status(200).json({ status: "success", data: roadmap.plans });
     } catch (error: any) {
       res.status(400).json({ status: "fail", error: error.message });
     }

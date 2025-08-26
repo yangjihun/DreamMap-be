@@ -7,9 +7,10 @@ import {
   experienceItemPrompt,
   projectItemPrompt,
   skillItemPrompt,
+  resumePrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
-const Resume = require("@models/Resume");
+import Resume from "@models/Resume";
 
 const ai = new GoogleGenAI({
   apiKey: config.gemini.apiKey,
@@ -48,7 +49,8 @@ const geminiController = {
   generateReview: async (req: Request, res: Response) => {
     try {
       let item;
-      let resume = await Resume.findById("68a7b8d77433cbd888394172");
+      const resumeId = req.params.id;
+      let resume = await Resume.findById(resumeId);
       if (!resume) {
         throw new Error("resume not found");
       }
@@ -74,6 +76,33 @@ const geminiController = {
           });
           console.log(">>>>>>", aiResponse.text);
           item.review = aiResponse.text;
+        }
+      }
+      await resume.save();
+      return res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", message: error.message });
+    }
+  },
+  generateResume: async (req: Request, res: Response) => {
+    try {
+      const { userId, resumeId } = req.body;
+      let item;
+      const resume = await Resume.findById(resumeId);
+      if (!resume) throw new Error("Resume not found");
+
+      for (let i = 0; i < resume.sessions.length; i++) {
+        for (let j = 0; j < resume.sessions[i].items.length; j++) {
+          let sessionTitle = resume.sessions[i].title;
+          item = resume.sessions[i].items[j];
+          const aiResponse = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: resumePrompt(item),
+          });
+          console.log(">>>>>>", aiResponse.text);
+          if (aiResponse.text) {
+            item.text = aiResponse.text;
+          }
         }
       }
       await resume.save();

@@ -8,6 +8,7 @@ const resourceItem = {
       enum: ["study", "course"],
     },
     name: { type: Type.STRING },
+    description: { type: Type.STRING },
     location: { type: Type.STRING },
     price: { type: Type.STRING },
     rating: { type: Type.NUMBER },

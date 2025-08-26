@@ -1,31 +1,29 @@
 import express from "express";
 import resumeController from "@controllers/resume.controller";
 import {uploadPdf, pdfToText} from "@middlewares/upload";
+import { authenticate } from "@middlewares/auth.middleware";
 const router = express.Router();
-// userId 받아오는 미들웨어 추가 예정
-// Resume 생성
-router.post("/", uploadPdf, pdfToText, resumeController.textUpload);
 
-// 사용자의 모든 Resume 목록 조회
-router.get("/all", resumeController.getUserResumes);
+// 새 Resume 생성 (섹션별 입력) 섹션 나누는 기능 생기면 변경 예정
+router.post("/new/sections", authenticate, resumeController.createNewResumeWithSections);
 
-// 특정 Resume 상세 조회 (resumeId)
-router.get("/:id", resumeController.getResumeById);
+// 새 Resume 생성
+router.post("/new", authenticate, uploadPdf, pdfToText, resumeController.createNewResume);
 
-// Resume title 수정 (resumeId)
-router.put("/:id", resumeController.updateResumeTitle);
+// Resume 조회
+router.get("/all", authenticate, resumeController.getUserResumes);
+router.get("/:id", authenticate, resumeController.getResumeById);
 
-// 특정 Item 수정 (resumeId, sessionKey, itemIndex)
-router.put("/:id/session/:sessionKey/item/:itemIndex", resumeController.updateItem);
+// 즐겨찾기 수정
+router.put("/:id/star", authenticate, resumeController.toggleStarred);
 
-// Resume 전체 삭제 (resumeId)
-router.delete("/:id", resumeController.deleteResume);
+// Resume 수정
+router.patch("/:id", authenticate, resumeController.patchResume);
 
-// Session 내 모든 items 삭제 (resumeId, sessionKey)
-router.delete("/:id/session/:sessionKey", resumeController.deleteSession);
+// session 삭제
+router.delete("/:id/session/:sessionKey", authenticate, resumeController.deleteSession);
 
-// 특정 Item 삭제 (resumeId, sessionKey, itemIndex)
-router.delete("/:id/session/:sessionKey/item/:itemIndex", resumeController.deleteItem);
+// Resume 삭제 (resumeId)
+router.delete("/:id", authenticate, resumeController.deleteResume);
 
 export default router;
-
