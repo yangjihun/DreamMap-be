@@ -8,6 +8,7 @@ import {
   projectItemPrompt,
   skillItemPrompt,
   itemPatchPrompt,
+  resumeReviewPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
