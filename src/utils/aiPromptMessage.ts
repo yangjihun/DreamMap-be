@@ -22,6 +22,18 @@ export const roadmapPrompt = (location: String, interestJob: String) =>
 - 중복 최소화.`;
 const items = require("@models/Resume");
 
+export const resumePrompt = (item: any) => `
+아래는 유저의 리쥬메의 한 섹션의 한 항목이다.
+${item.title}
+${item.text}
+
+그리고 아래는 이 세션에 대한 피드백이다.
+${item.review}
+
+피드백을 넣어서 이 파트를 수정하라.
+
+`;
+
 export const introItemPrompt = (item: any) =>
   `너는 IT 기업의 시니어 채용 담당자다.  
 아래는 지원자의 레쥬메 "자기소개(요약)" 섹션이다.  
