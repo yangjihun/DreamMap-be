@@ -20,18 +20,48 @@ export const roadmapPrompt = (location: String, interestJob: String) =>
 - rating은 1~5 소수점 허용, 모르면 null.
 - provider는 기관/주관사/플랫폼명.
 - 중복 최소화.`;
-const items = require("@models/Resume");
 
-export const resumeReviewPrompt = (resume: any) => `
-아래는 유저의 리쥬메이다.
-${resume.title}
+import { Resume, Session, Item } from "@models/Resume";
+
+export const resumeReviewPrompt = (resume: Resume) => `
+시스템 지시:
+당신의 유일한 출력은 JSON 객체 하나여야 합니다.
+설명, 인사말, 코드 블록(\`\`\`), 주석, 추가 텍스트를 절대 포함하지 마세요.
+
+요구사항:
+- JSON만 출력하세요.
+- 키는 반드시 review, score, wordCount 세 개만 포함하세요.
+- review: 전체적인 한국어 요약/평가(명확하고 간결하게).
+- score: 0~100 사이의 숫자(정수 또는 실수 허용). 최대 100점 만점.
+- wordCount: review의 공백 기준 단어 수(모델 추정치, 서버에서 재계산 가능).
+- 추가 속성 금지.
+
+출력 예시(참고용, 그대로 복사 금지):
+{"review":"...", "score":85, "wordCount":312}
+
+아래는 유저의 리쥬메입니다.
+
+제목: ${resume.title}
+
 ${resume.sessions
-  .map((session: any) =>
-    session.items.map((item: any) => item.title).join(", ")
+  .map(
+    (session: Session) => `
+섹션: ${session.title}
+${session.items
+  .map((item: Item) => {
+    let t = `${item.title}`;
+    if (item.companyAddress) t += `\n${item.companyAddress}`;
+    if (item.startDate && item.endDate)
+      t += `\n(${item.startDate} ~ ${item.endDate})`;
+    t += `\n  ${item.text}`;
+    return t;
+  })
+  .join("\n")}
+`
   )
-  .join(", ")}
+  .join("\n")}
 
-이 리쥬메를 평가하라. 최대 1000자 이내로 작성하라.
+이 리쥬메를 평가하여 위의 JSON 스펙에 맞춰 출력하세요.
 `;
 
 export const itemPatchPrompt = (item: any) => `

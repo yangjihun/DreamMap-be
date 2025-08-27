@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import config from "@config/config";
 import {
   roadmapPrompt,
@@ -47,7 +47,7 @@ const geminiController = {
     }));
     return mappedData;
   },
-  generateReview: async (req: Request, res: Response) => {
+  generateReview: async (req: Request, res: Response, next: NextFunction) => {
     try {
       let item;
       const resumeId = req.params.id;
@@ -78,8 +78,9 @@ const geminiController = {
           item.review = aiResponse.text;
         }
       }
+
       await resume.save();
-      return res.status(200).json({ status: "success", data: resume });
+      next();
     } catch (error: any) {
       res.status(400).json({ status: "fail", message: error.message });
     }
@@ -120,12 +121,30 @@ const geminiController = {
       const aiResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: resumeReviewPrompt(resume),
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              review: { type: "string" },
+              score: { type: "number" },
+              wordCount: { type: "number" },
+            },
+            required: ["review", "score", "wordCount"],
+            additionalProperties: false,
+          },
+        },
       });
-      if (aiResponse.text) {
-        resume.review = aiResponse.text;
-      }
+      if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
+
+      const formatData = JSON.parse(aiResponse.text);
+      resume.review = formatData.review;
+      resume.score = formatData.score;
+      resume.totalCount = formatData.wordCount;
+      console.log("review", resume.review);
       await resume.save();
-      return res.status(200).json({ status: "success", data: resume });
+
+      return res.status(200).json({ status: "success", data: formatData });
     } catch (error: any) {
       res.status(400).json({ status: "fail", message: error.message });
     }
