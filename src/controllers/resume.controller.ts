@@ -92,45 +92,32 @@ const resumeController = {
       const userId = (req as Request & { userId?: string }).userId;
       const { resumeTitle = "새 이력서", sections } = req.body;
 
-      if (!Object.values(sections || {}).some((s: any) => s?.text?.trim())) {
-        throw new Error("적어도 하나의 섹션에는 내용을 입력해야 합니다");
+      if (!Object.values(sections || {}).some((s: any) => 
+        Array.isArray(s?.items) && s.items.some((item: any) => item?.text?.trim())
+      )) {
+        throw new Error("섹션 내용을 입력해야 합니다");
       }
 
       const resume = new Resume({ userId, title: resumeTitle, sessions: [] });
 
-      Object.entries(sections || {}).forEach(([key, content]: [string, any]) => {
-        if (content?.text?.trim()) {
-          let session = resume.sessions.find((s: any) => s.key === key);
-
-          if (!session) {
-            session = {
+      Object.entries(sections || {}).forEach(([key, sectionData]: [string, any]) => {
+        if (sectionData?.title?.trim() && Array.isArray(sectionData.items) && sectionData.items.length > 0) {
+          const validItems = sectionData.items.filter((item: any) => item?.text?.trim());
+          
+          if (validItems.length > 0) {
+            const session = {
               key,
-              title: content.title || key,
-              items: [
-                {
-                  title: content.title || "title",
-                  text: content.text,
-                  startDate: undefined,
-                  endDate: undefined,
-                  review: undefined,
-                },
-              ],
-              wordCount: content.text.length,
+              title: sectionData.title.trim(),
+              items: validItems.map((item: any) => ({
+                title: item.title?.trim() || "새 항목",
+                text: item.text.trim(),
+                startDate: undefined,
+                endDate: undefined,
+                review: undefined,
+              })),
+              wordCount: validItems.reduce((acc: number, item: any) => acc + (item.text?.length || 0), 0),
             };
             resume.sessions.push(session);
-          } else {
-            session.items.push({
-              title: content.title || "title",
-              text: content.text,
-              startDate: undefined,
-              endDate: undefined,
-              review: undefined,
-            });
-
-            session.wordCount = session.items.reduce(
-              (a: number, it: { text?: string }) => a + (it.text?.length || 0),
-              0
-            );
           }
         }
       });
