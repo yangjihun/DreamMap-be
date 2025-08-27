@@ -21,6 +21,10 @@ interface Config {
   gemini: {
     apiKey: string | undefined;
   };
+  azure: {
+    endpoint: string | undefined;
+    key: string | undefined;
+  };
 }
 
 // process.env에서 필요한 값들을 읽어서 config 객체로 정리
@@ -41,6 +45,10 @@ const config: Config = {
   },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY,
+  },
+  azure: {
+    endpoint: process.env.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT,
+    key: process.env.AZURE_DOCUMENT_INTELLIGENCE_KEY,
   },
 };
 

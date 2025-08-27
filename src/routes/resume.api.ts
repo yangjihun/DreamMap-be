@@ -1,6 +1,6 @@
 import express from "express";
 import resumeController from "@controllers/resume.controller";
-import {uploadPdf, pdfToText} from "@middlewares/upload";
+import { uploadPdf, analyzePdfMiddleware} from "@middlewares/upload";
 import { authenticate } from "@middlewares/auth.middleware";
 const router = express.Router();
 
@@ -8,7 +8,7 @@ const router = express.Router();
 router.post("/new/sections", authenticate, resumeController.createNewResumeWithSections);
 
 // 새 Resume 생성
-router.post("/new", authenticate, uploadPdf, pdfToText, resumeController.createNewResume);
+router.post("/new", authenticate, uploadPdf, analyzePdfMiddleware, resumeController.createFromPdf);
 
 // Resume 조회
 router.get("/all", authenticate, resumeController.getUserResumes);
