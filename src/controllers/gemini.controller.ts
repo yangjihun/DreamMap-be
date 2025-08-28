@@ -50,6 +50,7 @@ const geminiController = {
   generateReview: async (req: Request, res: Response, next: NextFunction) => {
     try {
       let item;
+      let length = 0;
       const resumeId = req.params.id;
       let resume = await Resume.findById(resumeId);
       if (!resume) {
@@ -59,6 +60,7 @@ const geminiController = {
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
           item = resume.sessions[i].items[j];
+          length += item.text.length;
           let prompt;
           if (sessionTitle === "Introduction") {
             prompt = introItemPrompt(item);
@@ -84,7 +86,7 @@ const geminiController = {
           if (item.oldText) item.oldText = undefined;
         }
       }
-
+      resume.totalCount = length;
       await resume.save();
       next();
     } catch (error: any) {
@@ -101,15 +103,21 @@ const geminiController = {
       for (let i = 0; i < resume.sessions.length; i++) {
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
-          item = resume.sessions[i].items[j];
-          const aiResponse = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: itemPatchPrompt(item),
-          });
+          if (
+            !["skills", "스킬"].some((keyword) =>
+              sessionTitle.includes(keyword)
+            )
+          ) {
+            item = resume.sessions[i].items[j];
+            const aiResponse = await ai.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: itemPatchPrompt(item),
+            });
 
-          if (aiResponse.text) {
-            item.oldText = item.text;
-            item.text = aiResponse.text;
+            if (aiResponse.text) {
+              item.oldText = item.text;
+              item.text = aiResponse.text;
+            }
           }
         }
       }
@@ -137,9 +145,8 @@ const geminiController = {
             properties: {
               review: { type: "string" },
               score: { type: "number" },
-              wordCount: { type: "number" },
             },
-            required: ["review", "score", "wordCount"],
+            required: ["review", "score"],
             additionalProperties: false,
           },
         },
@@ -149,7 +156,6 @@ const geminiController = {
       const formatData = JSON.parse(aiResponse.text);
       resume.review = formatData.review;
       resume.score = formatData.score;
-      resume.totalCount = formatData.wordCount;
       console.log("review", resume.review);
       await resume.save();
 
