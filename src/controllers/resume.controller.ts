@@ -16,20 +16,25 @@ function sanitizeItem(item: any) {
   return {
     title: String(item?.title ?? "새 항목"),
     text: String(item?.text ?? ""),
-    startDate: item?.startDate ?? undefined,
-    endDate: item?.endDate ?? undefined,
-    review: item?.review ?? undefined,
+    startDate: item?.startDate || undefined,
+    endDate: item?.endDate || undefined,
+    review: item?.review || undefined,
+    companyAddress: item?.companyAddress || undefined,
   };
+}
+
+function calculateTotalCount(sessions: any[]): number {
+  return sessions.reduce((total, session) => total + (session.wordCount || 0), 0);
 }
 
 function sanitizeSession(s: any) {
   const key = String(s?.key ?? "");
   const title = String(s?.title ?? key);
   const items = Array.isArray(s?.items) ? s.items.map(sanitizeItem) : [];
-  const wordCount =
-    typeof s?.wordCount === "number"
-      ? s.wordCount
-      : items.reduce((a: number, it: { text?: string }) => a + (it.text?.length || 0), 0);
+  const wordCount = items.reduce((a: number, it: { text?: string }) => {
+    const cleanText = it.text?.replace(/^•\s*/gm, "").trim() || "";
+    return a + cleanText.length;
+  }, 0);
   return { key, title, items, wordCount };
 }
 
@@ -60,12 +65,16 @@ const resumeController = {
             if (Array.isArray(s?.items)) {
               session.items = s.items.map(sanitizeItem);
               session.wordCount = session.items.reduce(
-                (a: number, it: { text?: string }) => a + (it.text?.length || 0),
+                (a: number, it: { text?: string }) => {
+                  const cleanText = it.text?.replace(/^•\s*/gm, "").trim() || "";
+                  return a + cleanText.length;
+                },
                 0
               );
             }
           }
         }
+        resume.totalCount = calculateTotalCount(resume.sessions);
       }
 
       await resume.save();
@@ -83,6 +92,8 @@ const resumeController = {
       const before = resume.sessions.length;
       resume.sessions = resume.sessions.filter((s: any) => s.key !== sessionKey);
       if (resume.sessions.length === before) throw new Error("Session not found");
+      resume.totalCount = calculateTotalCount(resume.sessions);
+      
       await resume.save();
       return res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
@@ -113,18 +124,21 @@ const resumeController = {
               items: validItems.map((item: any) => ({
                 title: item.title?.trim() || "새 항목",
                 text: item.text.trim(),
-                startDate: undefined,
-                endDate: undefined,
+                startDate: item.startDate || undefined,
+                endDate: item.endDate || undefined,
                 review: undefined,
+                companyAddress: item.companyAddress || undefined,
               })),
-              wordCount: validItems.reduce((acc: number, item: any) => acc + (item.text?.length || 0), 0),
+              wordCount: validItems.reduce((acc: number, item: any) => {
+                const cleanText = item.text?.replace(/^•\s*/gm, "").trim() || "";
+                return acc + cleanText.length;
+              }, 0),
             };
             resume.sessions.push(session);
           }
         }
       });
-
-
+      resume.totalCount = calculateTotalCount(resume.sessions);
       await resume.save();
       res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
@@ -156,6 +170,7 @@ const resumeController = {
         startDate,
         endDate,
         review,
+        companyAddress: req.body.companyAddress,
       };
 
       let session = resume.sessions.find((s: any) => s.key === key);
@@ -165,16 +180,22 @@ const resumeController = {
           key,
           title: itemTitle || key,
           items: [newItem],
-          wordCount: text.length,
+          wordCount: text.replace(/^•\s*/gm, "").trim().length,
         };
         resume.sessions.push(session);
       } else {
         session.items.push(newItem);
         session.wordCount = session.items.reduce(
-          (a: number, it: { text?: string }) => a + (it.text?.length || 0),
+          (a: number, it: { text?: string }) => {
+            const cleanText = it.text?.replace(/^•\s*/gm, "").trim() || "";
+            return a + cleanText.length;
+          },
           0
         );
       }
+      
+      resume.totalCount = calculateTotalCount(resume.sessions);
+      
       await resume.save();
       res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
