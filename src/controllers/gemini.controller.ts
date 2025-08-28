@@ -74,6 +74,11 @@ const geminiController = {
           const aiResponse = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
+            config: {
+              thinkingConfig: {
+                thinkingBudget: 0, // Disables thinking -> 속도개선
+              },
+            },
           });
           item.review = aiResponse.text;
           if (item.oldText) item.oldText = undefined;
@@ -123,6 +128,9 @@ const geminiController = {
         model: "gemini-2.5-flash",
         contents: resumeReviewPrompt(resume),
         config: {
+          thinkingConfig: {
+            thinkingBudget: 0, // Disables thinking -> 속도개선
+          },
           responseMimeType: "application/json",
           responseSchema: {
             type: "object",
