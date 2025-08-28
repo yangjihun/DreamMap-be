@@ -16,9 +16,10 @@ function sanitizeItem(item: any) {
   return {
     title: String(item?.title ?? "새 항목"),
     text: String(item?.text ?? ""),
-    startDate: item?.startDate ?? undefined,
-    endDate: item?.endDate ?? undefined,
-    review: item?.review ?? undefined,
+    startDate: item?.startDate || undefined,
+    endDate: item?.endDate || undefined,
+    review: item?.review || undefined,
+    companyAddress: item?.companyAddress || undefined,
   };
 }
 
@@ -123,9 +124,10 @@ const resumeController = {
               items: validItems.map((item: any) => ({
                 title: item.title?.trim() || "새 항목",
                 text: item.text.trim(),
-                startDate: undefined,
-                endDate: undefined,
+                startDate: item.startDate || undefined,
+                endDate: item.endDate || undefined,
                 review: undefined,
+                companyAddress: item.companyAddress || undefined,
               })),
               wordCount: validItems.reduce((acc: number, item: any) => {
                 const cleanText = item.text?.replace(/^•\s*/gm, "").trim() || "";
@@ -168,6 +170,7 @@ const resumeController = {
         startDate,
         endDate,
         review,
+        companyAddress: req.body.companyAddress,
       };
 
       let session = resume.sessions.find((s: any) => s.key === key);
