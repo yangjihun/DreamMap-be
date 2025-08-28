@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction  } from "express";
 import Resume from "@models/Resume";
 import AppError from '@utils/appError';
+import resumeService from '@services/resume.service';
 
 function ensureSession(resume: any, key: string, defaultTitle?: string) {
   let session = resume.sessions.find((s: any) => s.key === key);
@@ -230,6 +231,43 @@ const resumeController = {
   },
 
 
+  // createFromPdf: async (req: Request, res: Response, next: NextFunction) => {
+  //   try {
+  //     const { parsedSections, resumeTitle } = req.body;
+  //     const userId = (req as any).userId;
+
+  //     if (!parsedSections || !resumeTitle || !userId) {
+  //       return next(new AppError('분석된 데이터, 제목, 사용자 정보가 필요합니다.', 400));
+  //     }
+
+  //     const sessions = Object.entries(parsedSections).map(([sectionTitle, contentArray]) => {
+  //       const items = (contentArray as string[]).map(text => ({
+  //         title: 'Parsed Item',
+  //         text: text,
+  //       }));
+
+  //       return {
+  //         key: sectionTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+  //         title: sectionTitle,
+  //         items: items,
+  //         wordCount: items.reduce((acc, item) => acc + (item.text?.length || 0), 0),
+  //       };
+  //     });
+
+  //     const newResume = new Resume({
+  //       userId,
+  //       title: resumeTitle,
+  //       sessions,
+  //       status: 'draft',
+  //     });
+
+  //     await newResume.save();
+  //     res.status(201).json({ status: 'success', data: newResume.toJSON() });
+
+  //   } catch (error) {
+  //     return next(error);
+  //   }
+  // },
   createFromPdf: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { parsedSections, resumeTitle } = req.body;
@@ -239,28 +277,10 @@ const resumeController = {
         return next(new AppError('분석된 데이터, 제목, 사용자 정보가 필요합니다.', 400));
       }
 
-      const sessions = Object.entries(parsedSections).map(([sectionTitle, contentArray]) => {
-        const items = (contentArray as string[]).map(text => ({
-          title: 'Parsed Item',
-          text: text,
-        }));
+      // 1. 실제 로직은 서비스에 위임합니다.
+      const newResume = await resumeService.createFromPdf(userId, resumeTitle, parsedSections);
 
-        return {
-          key: sectionTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-          title: sectionTitle,
-          items: items,
-          wordCount: items.reduce((acc, item) => acc + (item.text?.length || 0), 0),
-        };
-      });
-
-      const newResume = new Resume({
-        userId,
-        title: resumeTitle,
-        sessions,
-        status: 'draft',
-      });
-
-      await newResume.save();
+      // 2. 컨트롤러는 성공 응답만 보냅니다.
       res.status(201).json({ status: 'success', data: newResume.toJSON() });
 
     } catch (error) {
