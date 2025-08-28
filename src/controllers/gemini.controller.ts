@@ -76,6 +76,7 @@ const geminiController = {
             contents: prompt,
           });
           item.review = aiResponse.text;
+          if (item.oldText) item.oldText = undefined;
         }
       }
 
