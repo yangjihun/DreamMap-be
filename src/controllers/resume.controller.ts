@@ -2,6 +2,7 @@ import { Request, Response, NextFunction  } from "express";
 import Resume from "@models/Resume";
 import AppError from '@utils/appError';
 import resumeService from '@services/resume.service';
+import { constrainedMemory } from "process";
 
 function ensureSession(resume: any, key: string, defaultTitle?: string) {
   let session = resume.sessions.find((s: any) => s.key === key);
@@ -36,6 +37,10 @@ function sanitizeSession(s: any) {
     return a + cleanText.length;
   }, 0);
   return { key, title, items, wordCount };
+}
+
+function escapeRegex(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 const resumeController = {
@@ -216,7 +221,14 @@ const resumeController = {
   getUserResumes: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
-      const resumes = await Resume.find({ userId });
+      const name = req.query.name as string | undefined;
+      const cond: any = {};
+      if (name && name.trim()) {
+      const re = new RegExp(escapeRegex(name), "i");
+      cond.title = re;
+    }
+      if (userId) cond.userId = userId;
+      let resumes = await Resume.find(cond);
       res.status(200).json({ status: "success", data: resumes });
     } catch (error: any) {
       return res.status(400).json({ status: "fail", error: error.message });
