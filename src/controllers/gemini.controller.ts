@@ -228,10 +228,6 @@ const geminiController = {
       const userId = (req as Request & { userId?: string }).userId;
       const { text } = req.body;
 
-      console.log("Request headers:", req.headers);
-      console.log("Request body:", req.body);
-      console.log("User ID from request:", userId);
-
       if (!userId) {
         return res
           .status(401)
@@ -263,30 +259,14 @@ const geminiController = {
 
       if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
 
-      console.log(
-        "AI Response received:",
-        aiResponse.text.substring(0, 200) + "..."
-      );
-
       const parsed = JSON.parse(aiResponse.text);
-      console.log("Parsed data:", JSON.stringify(parsed, null, 2));
-
-      // Clean up any unwanted fields
-      delete parsed._id;
-      delete parsed.id;
-      delete parsed.createdAt;
-      delete parsed.updatedAt;
-      delete parsed.userId; // Remove userId from AI response as we'll set it manually
 
       const resume = new Resume({
         ...parsed,
-        userId, // Set the authenticated user's ID
+        userId,
       });
 
-      console.log("Resume object to save:", JSON.stringify(resume, null, 2));
-
       await resume.save();
-      console.log("Resume saved successfully with ID:", resume._id);
 
       return res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
