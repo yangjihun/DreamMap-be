@@ -168,6 +168,8 @@ export const extractTextToJSON = (text: string) => `
 ${text}
 
 이 내용을 아래래의 스키마에 맞춰 JSON 형식으로 추출해서 출력하라.
+유저 기본정보도 아이템 타이틀 "개인정보" 에 저장하고 ,mail 이나 gmail 이나, github 등등을 아이템으로 넣으라, 개이정보 에 있는 아이템 텍스트는 bullet point가 없어도 됨.
+아이템 텍스트는 매줄마다 bullet point로 시작하게 하라. 
 
 import { Schema, model, Model, HydratedDocument, Types } from "mongoose";
 

@@ -10,7 +10,7 @@ router.post(
   geminiController.generateReview,
   geminiController.generateReviewWhole
 );
-router.post("/generate/:id", geminiController.generateResume);
 router.post("/generate/json", authenticate, geminiController.generateJSON);
+router.post("/generate/:id", geminiController.generateResume);
 
 export default router;

@@ -18,7 +18,6 @@ import Resume from "@models/Resume";
 const resumeJsonSchema = {
   type: "object",
   properties: {
-    userId: { type: "string" },
     title: { type: "string" },
     totalCount: { type: "number" },
     score: { type: "number" },
@@ -56,7 +55,7 @@ const resumeJsonSchema = {
     lastModified: { type: "string" },
     review: { type: "string" },
   },
-  required: ["userId", "title", "sessions"],
+  required: ["title", "sessions"],
 };
 
 const ai = new GoogleGenAI({
@@ -168,14 +167,15 @@ const geminiController = {
             ].some((keyword) => sessionTitle.includes(keyword))
           ) {
             item = resume.sessions[i].items[j];
-            const aiResponse = await ai.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: itemPatchPrompt(item),
-            });
-
-            if (aiResponse.text) {
-              item.oldText = item.text;
-              item.text = aiResponse.text;
+            if (!(item.oldText == item.text)) {
+              const aiResponse = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: itemPatchPrompt(item),
+              });
+              if (aiResponse.text) {
+                item.oldText = item.text;
+                item.text = aiResponse.text;
+              }
             }
           }
         }
@@ -225,8 +225,29 @@ const geminiController = {
   },
   generateJSON: async (req: Request, res: Response) => {
     try {
-      const userId = (req as any).userId;
-      const text = req.body.text;
+      const userId = (req as Request & { userId?: string }).userId;
+      const { text } = req.body;
+
+      console.log("Request headers:", req.headers);
+      console.log("Request body:", req.body);
+      console.log("User ID from request:", userId);
+
+      if (!userId) {
+        return res
+          .status(401)
+          .json({ status: "fail", message: "인증이 필요합니다." });
+      }
+
+      if (!text || text.trim().length === 0) {
+        return res
+          .status(400)
+          .json({ status: "fail", message: "텍스트가 필요합니다." });
+      }
+
+      console.log(
+        "Generating resume from text:",
+        text.substring(0, 100) + "..."
+      );
 
       const aiResponse = await ai.models.generateContent({
         model: "gemini-2.5-flash",
@@ -239,15 +260,37 @@ const geminiController = {
           responseSchema: resumeJsonSchema,
         },
       });
+
       if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
+
+      console.log(
+        "AI Response received:",
+        aiResponse.text.substring(0, 200) + "..."
+      );
+
       const parsed = JSON.parse(aiResponse.text);
+      console.log("Parsed data:", JSON.stringify(parsed, null, 2));
+
+      // Clean up any unwanted fields
+      delete parsed._id;
+      delete parsed.id;
+      delete parsed.createdAt;
+      delete parsed.updatedAt;
+      delete parsed.userId; // Remove userId from AI response as we'll set it manually
+
       const resume = new Resume({
         ...parsed,
-        userId, // override with your real userId
+        userId, // Set the authenticated user's ID
       });
+
+      console.log("Resume object to save:", JSON.stringify(resume, null, 2));
+
       await resume.save();
-      return res.status(200).json({ status: "success", data: aiResponse.text });
+      console.log("Resume saved successfully with ID:", resume._id);
+
+      return res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
+      console.error("Error in generateJSON:", error);
       res.status(400).json({ status: "fail", message: error.message });
     }
   },
