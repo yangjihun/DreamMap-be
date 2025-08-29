@@ -1,53 +1,17 @@
 import Resume, { ResumeDoc, Item } from "@models/Resume";
 import { Types } from "mongoose";
-import { DocumentAnalysisClient, AzureKeyCredential, AnalyzeResult, AnalyzedDocument } from '@azure/ai-form-recognizer';
-import config from '@config/config';
-
-// Azure 클라이언트 초기화
-const azureClient = new DocumentAnalysisClient(
-  config.azure.endpoint!,
-  new AzureKeyCredential(config.azure.key!)
-);
-
-// 섹션 그룹화 함수
-function groupSections(layoutResult: AnalyzeResult<AnalyzedDocument>): Record<string, string[]> {
-  const groupedData: Record<string, string[]> = {};
-  let currentTitle: string | null = null;
-
-  const titleKeywords = [
-    "기본 정보", "학력", "기술 스택", "프로젝트 경험",
-    "활동", "수상", "자기소개"
-  ];
-
-  if (layoutResult && layoutResult.paragraphs) {
-    layoutResult.paragraphs.forEach(p => {
-      const content = p.content.trim();
-      const isTitle = titleKeywords.some(keyword => content.includes(keyword));
-
-      if (p.role === 'sectionHeading' || isTitle) {
-        currentTitle = content;
-        groupedData[currentTitle] = [];
-      } else if (currentTitle) {
-        groupedData[currentTitle].push(content);
-      }
-    });
-  }
-  return groupedData;
-}
-
-// Azure PDF 분석 서비스 함수
-export async function analyzePdfLayout(buffer: Buffer): Promise<Record<string, string[]>> {
-  const poller = await azureClient.beginAnalyzeDocument("prebuilt-layout", buffer);
-  const result = await poller.pollUntilDone();
-  const groupedResult = groupSections(result);
-  return groupedResult;
-}
 
 async function createFromPdf(
   userId: string | Types.ObjectId,
   resumeTitle: string,
   parsedSections: Record<string, string[]>
 ): Promise<ResumeDoc> {
+  // [추가] titleKeywords를 서비스 내에서 사용할 수 있도록 정의
+  const titleKeywords = [
+    "기본 정보", "학력", "기술 스택", "프로젝트 경험",
+    "활동", "수상", "자기소개"
+  ];
+
   const sessions = Object.entries(parsedSections)
     .map(([sectionTitle, contentArray]) => {
       let items: Item[];
@@ -63,30 +27,30 @@ async function createFromPdf(
         const projects: Item[] = [];
         let currentTitle = "";
         let currentTextLines: string[] = [];
+        
+        // 모든 텍스트를 하나로 합친 후, 줄바꿈 기준으로 나눕니다.
+        const allLines = (contentArray as string[]).join('\n').split('\n');
 
-        (contentArray as string[]).forEach(line => {
+        allLines.forEach(line => {
           const cleanedLine = cleanText(line);
+          if (!cleanedLine) return;
 
-          // [수정] 새 규칙: 글머리 기호(•)가 없는 줄은 새 프로젝트의 제목으로 간주
-          if (!cleanedLine.startsWith('•')) {
-            // 이전에 수집된 프로젝트가 있다면 먼저 배열에 추가
+          const isNewProjectTitle = !cleanedLine.startsWith('•');
+
+          if (isNewProjectTitle) {
             if (currentTitle) {
               projects.push({
                 title: currentTitle,
                 text: currentTextLines.join('\n').trim()
               });
             }
-            // 새 프로젝트 정보 초기화
             currentTitle = cleanedLine;
             currentTextLines = [];
           } else {
-            // 글머리 기호가 있는 줄은 현재 프로젝트의 내용으로 추가
-            // 내용 앞의 글머리 기호는 제거
             currentTextLines.push(cleanedLine.replace(/^•\s*/, "").trim());
           }
         });
 
-        // 루프가 끝난 후 마지막으로 남아있는 프로젝트를 추가
         if (currentTitle) {
           projects.push({
             title: currentTitle,
@@ -94,7 +58,7 @@ async function createFromPdf(
           });
         }
         items = projects;
-
+      
       } else if (sectionTitle.includes("활동")) {
         items = (contentArray as string[]).map(line => {
           const cleanedLine = cleanText(line);
@@ -121,8 +85,22 @@ async function createFromPdf(
         items: items,
         wordCount: items.reduce((acc, item) => acc + (item.text?.length || 0), 0),
       };
-    })
-    .filter(session => session.items.length > 0 && session.items.some(item => item.text.trim() !== ""));
+    }).filter(session => {
+      const title = session.title;
+
+      // 규칙: 주요 키워드로 시작하는 제목은 절대 제거하지 않는다.
+      if (titleKeywords.some(keyword => title.startsWith(keyword))) {
+          return true; // 주요 섹션이므로 유지
+      }
+
+      // 그 외의 제목(예: BAPAGO (...))이 괄호를 포함하면 제거
+      if (title.includes('(')) {
+          return false;
+      }
+
+      // 내용이 비어있는 경우도 제거
+      return session.items.length > 0 && session.items.some(item => item.text.trim() !== "");
+  });
   
   const newResume = new Resume({
     userId,
@@ -134,7 +112,7 @@ async function createFromPdf(
   await newResume.save();
   return newResume;
 }
-
+  
 const resumeService = {
     createFromPdf,
 };
