@@ -1,5 +1,6 @@
 import express from "express";
 import geminiController from "@controllers/gemini.controller";
+import { authenticate } from "@middlewares/auth.middleware";
 
 const router = express.Router();
 
@@ -10,5 +11,6 @@ router.post(
   geminiController.generateReviewWhole
 );
 router.post("/generate/:id", geminiController.generateResume);
+router.post("/generate/json", authenticate, geminiController.generateJSON);
 
 export default router;

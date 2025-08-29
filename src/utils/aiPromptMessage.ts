@@ -61,7 +61,8 @@ ${session.items
   )
   .join("\n")}
 
-이 리쥬메를 평가하여 위의 JSON 스펙에 맞춰 출력하세요. 그리고 간략한 피드백도 해주세요.(점수가 왜 깍였는지)
+이 리쥬메를 좀 엄격하게 평가하여 위의 JSON 스펙에 맞춰 출력하세요. 그리고 간략한 피드백도 해주세요.(점수가 왜 깍였는지)
+우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
 `;
 
 export const itemPatchPrompt = (item: any) => `
@@ -90,6 +91,7 @@ export const introItemPrompt = (item: any) =>
 ${item.title}  
 ${item.text}  
 
+우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
 이 질문의 해답은 3줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
 항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
 
@@ -106,6 +108,7 @@ ${item.title}
 ${item.startDate} ~ ${item.endDate}  
 ${item.text}  
 
+우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
 이 질문의 해답은 4줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
 항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
 
@@ -123,6 +126,7 @@ ${item.title}
 ${item.startDate} ~ ${item.endDate}  
 ${item.text}  
 
+우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
 마지막으로, 이 프로젝트가 실제 IT 기업 면접에서 긍정적으로 인정받을 가능성을 **%로 추정**하고, 그 이유를 간단히 설명하라.  
 이 질문의 해답은 4줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
 항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
@@ -138,9 +142,126 @@ export const skillItemPrompt = (item: any) =>
 - 포맷과 표현이 명확하고 일관적인가?  
 
 ${item.title}  
-${item.startDate} ~ ${item.endDate}  
 ${item.text}  
 
-
+우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
 이 질문의 해답은 4줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
 항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
+
+export const degreeItemPrompt = (item: any) => `
+아래는 지원자의 레쥬메 중 "학력" 항목이다.
+이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
+
+- 학력의 정보가 명확하게 표시되었는가?  
+- 학교와 전공, 졸업 여부 등이 분명한가?  
+- 학력 수준이 지원자의 경력과 관련성이 있는가?  
+- 학력 외 포함된 다른 내요을 평가하라.
+
+${item.title}  
+${item.text}  
+우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
+이 질문의 해답은 4줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
+항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
+
+export const extractTextToJSON = (text: string) => `
+아래는 유저의 리쥬메 전체 내용이다.
+${text}
+
+이 내용을 아래래의 스키마에 맞춰 JSON 형식으로 추출해서 출력하라.
+
+import { Schema, model, Model, HydratedDocument, Types } from "mongoose";
+
+export interface Item {
+  title: string;
+  text: string;
+  startDate?: string;
+  endDate?: string;
+  review?: string;
+  companyAddress?: string;
+  oldText?: string;
+  degree?: string;
+}
+
+export interface Session {
+  key: string;
+  title: string;
+  items: Item[];
+  wordCount: number;
+}
+
+export interface Resume {
+  userId: Types.ObjectId;
+  title: string;
+  totalCount: number;
+  score: number;
+  starred: boolean;
+  sessions: Session[];
+  status: string;
+  lastModified: string;
+  review: string;
+}
+
+export interface ResumeMethods {
+  toJSON(): any;
+}
+
+export type ResumeDoc = HydratedDocument<Resume, ResumeMethods>;
+export type ResumeModel = Model<Resume, {}, ResumeMethods>;
+
+const itemSchema = new Schema(
+  {
+    title: { type: String, default: "title" },
+    companyAddress: { type: String },
+    text: { type: String, required: true },
+    startDate: { type: String },
+    endDate: { type: String },
+    oldText: { type: String },
+    review: { type: String },
+    degree: { type: String },
+  },
+  { _id: false }
+);
+
+const sessionSchema = new Schema(
+  {
+    key: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    title: { type: String, required: true },
+    items: { type: [itemSchema], default: [] },
+    wordCount: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
+
+const resumeSchema = new Schema<Resume, ResumeModel, ResumeMethods>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    title: { type: String, required: true, default: "title" },
+    totalCount: { type: Number, default: 0 },
+    score: { type: Number, default: 0 },
+    starred: { type: Boolean, default: false },
+    sessions: { type: [sessionSchema], default: [] },
+    status: { type: String, default: "draft" },
+    lastModified: { type: String, default: "2024년 1월 15일" },
+    review: { type: String },
+  },
+  { timestamps: true }
+);
+
+resumeSchema.methods.toJSON = function () {
+  const obj = this.toObject() as any;
+  obj.id = obj._id;
+  delete obj._id;
+  delete obj.__v;
+  return obj;
+};
+
+const Resume = model<Resume, ResumeModel>("Resume", resumeSchema);
+export default Resume;
+export { Resume };
+
+
+`;

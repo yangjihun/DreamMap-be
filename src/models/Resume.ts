@@ -8,6 +8,7 @@ export interface Item {
   review?: string;
   companyAddress?: string;
   oldText?: string;
+  degree?: string;
 }
 
 export interface Session {
@@ -45,6 +46,7 @@ const itemSchema = new Schema(
     endDate: { type: String },
     oldText: { type: String },
     review: { type: String },
+    degree: { type: String },
   },
   { _id: false }
 );
