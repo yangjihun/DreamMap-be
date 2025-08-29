@@ -1,36 +1,39 @@
 import multer from "multer";
 import { Request, Response, NextFunction } from "express";
-const pdfParse = require("pdf-parse");
+import { analyzePdfLayout } from '../services/azure.service';
+import AppError from "@utils/appError";
 
 export const uploadPdf = multer({
     storage: multer.memoryStorage(),
     limits: {fileSize: 20 * 1024 * 1024},
 }).single("file");
 
-export async function pdfToText(req: Request, res: Response, next: NextFunction) {
+
+// PDF 분석 미들웨어
+export async function analyzePdfMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
-    const file = (req as any).file as Express.Multer.File | undefined;
-    if (!file) return next();
-    const isPdf = file.mimetype === 'application/pdf' || /\.pdf$/i.test(file.originalname || "");
-    if (!isPdf) {
-        throw new Error('PDF 파일만 업로드 가능합니다');
-    }
-    const parsed = await pdfParse(file.buffer);
-    const text = (parsed?.text || "").trim();
-
-    if (!text) {
-        throw new Error('pdf에서 text를 추출하지 못했습니다');
+    // Multer가 처리한 파일 가져오기
+    const file = req.file;
+    if (!file) {
+      // 파일이 없으면 다음 미들웨어로 넘어감 (파일 업로드가 선택적인 경우)
+      return next(); 
     }
 
-    if (!req.body) (req as any).body = {};
-    req.body.text = req.body.text || text;
-    // 파일명을 기본 제목으로 설정 (필요 시)
-    req.body.itemTitle = req.body.itemTitle || `PDF: ${file.originalname ?? "uploaded.pdf"}`;
+    // application/pdf 타입인지 확인
+    if (file.mimetype !== 'application/pdf') {
+      return next(new AppError('PDF 파일만 업로드 가능합니다.', 400));
+    }
+
+    // azure.service.ts의 함수를 호출하여 PDF 분석 및 그룹화 실행
+    const parsedSections = await analyzePdfLayout(file.buffer);
+
+    // 분석된 결과를 req.body에 추가하여 다음 컨트롤러로 전달
+    req.body.parsedSections = parsedSections;
 
     return next();
+
   } catch (error: any) {
-    return res.status(400).json({status:'fail', error: error.message});
+    // 오류 발생 시 400 상태 코드와 에러 메시지 반환
+    return next(error);
   }
 };
-
-export default pdfToText;

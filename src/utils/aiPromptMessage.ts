@@ -20,9 +20,51 @@ export const roadmapPrompt = (location: String, interestJob: String) =>
 - rating은 1~5 소수점 허용, 모르면 null.
 - provider는 기관/주관사/플랫폼명.
 - 중복 최소화.`;
-const items = require("@models/Resume");
 
-export const resumePrompt = (item: any) => `
+import { Resume, Session, Item } from "@models/Resume";
+
+export const resumeReviewPrompt = (resume: Resume) => `
+시스템 지시:
+당신의 유일한 출력은 JSON 객체 하나여야 합니다.
+설명, 인사말, 코드 블록(\`\`\`), 주석, 추가 텍스트를 절대 포함하지 마세요.
+
+요구사항:
+- JSON만 출력하세요.
+- 키는 반드시 review, score, wordCount 세 개만 포함하세요.
+- review: 전체적인 한국어 요약/평가(명확하고 간결하게).
+- score: 0~100 사이의 숫자(정수 또는 실수 허용). 최대 100점 만점.
+- wordCount: review의 공백 기준 단어 수(모델 추정치, 서버에서 재계산 가능).
+- 추가 속성 금지.
+
+출력 예시(참고용, 그대로 복사 금지):
+{"review":"...", "score":85}
+
+아래는 유저의 리쥬메입니다.
+
+제목: ${resume.title}
+
+${resume.sessions
+  .map(
+    (session: Session) => `
+섹션: ${session.title}
+${session.items
+  .map((item: Item) => {
+    let t = `${item.title}`;
+    if (item.companyAddress) t += `\n${item.companyAddress}`;
+    if (item.startDate && item.endDate)
+      t += `\n(${item.startDate} ~ ${item.endDate})`;
+    t += `\n  ${item.text}`;
+    return t;
+  })
+  .join("\n")}
+`
+  )
+  .join("\n")}
+
+이 리쥬메를 평가하여 위의 JSON 스펙에 맞춰 출력하세요. 그리고 간략한 피드백도 해주세요.(점수가 왜 깍였는지)
+`;
+
+export const itemPatchPrompt = (item: any) => `
 아래는 유저의 리쥬메의 한 섹션의 한 항목이다.
 ${item.title}
 ${item.text}
@@ -30,13 +72,15 @@ ${item.text}
 그리고 아래는 이 세션에 대한 피드백이다.
 ${item.review}
 
-피드백을 넣어서 이 파트를 수정하라.
+피드백을 넣어서 이 파트를 수정하라. 단 너의 서술은 제거하라. 또한 제목도 제거하라(예:${item.title}).
+그리고 *은 빼고 똑같이 bullet point(•) 로 생성하라. 또는 너가 생각하기에 적합한 개수의 bullet point로 생성하라.
+무엇보다도 간략하고 파워풀하게 생성하라. 줄바꿈은 최대 한줄로 하라.
 
 `;
 
 export const introItemPrompt = (item: any) =>
   `너는 IT 기업의 시니어 채용 담당자다.  
-아래는 지원자의 레쥬메 "자기소개(요약)" 섹션이다.  
+아래는 지원자의 레쥬메 중 "자기소개(요약)" 섹션이다.  
 이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
 
 - 지원자의 커리어 목표와 역량이 명확하게 드러나는가?  
@@ -51,12 +95,12 @@ ${item.text}
 
 export const experienceItemPrompt = (item: any) =>
   `너는 IT 기업의 시니어 채용 담당자다.  
-아래는 지원자의 레쥬메 "경력(직무 경험)" 섹션이다.  
+아래는 지원자의 레쥬메 중 "경력(직무 경험)" 섹션이다.  
 이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
 
-- 수행한 업무와 역할이 구체적이고 측정 가능한 성과로 드러나는가?  
-- 사용한 기술 스택, 도구, 방법론이 명확하게 기술되어 있는가?  
-- 단순 업무 나열이 아니라, 지원자의 기여도가 드러나는가?  
+- 잘 드러난 강점이나 역량은 무엇인가? (예: 문제 해결, 팀워크, 고객 대응, 책임감 등)  
+- IT 직무와 간접적으로라도 연결될 수 있는 경험이나 역량은 무엇인가?  
+- 더 구체적으로 보강해야 할 부분은 무엇인가? (성과 수치, 사용한 기술, 기여도 등)  
 
 ${item.title}  
 ${item.startDate} ~ ${item.endDate}  
@@ -67,7 +111,7 @@ ${item.text}
 
 export const projectItemPrompt = (item: any) =>
   `너는 IT 기업의 시니어 채용 담당자다.  
-아래는 지원자의 레쥬메 "프로젝트 경험" 섹션이다.  
+아래는 지원자의 레쥬메 중중 "프로젝트 경험" 섹션이다.  
 이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
 
 - 프로젝트의 목표와 결과물이 명확하게 서술되어 있는가?  
@@ -85,17 +129,18 @@ ${item.text}
 
 export const skillItemPrompt = (item: any) =>
   `너는 IT 기업의 시니어 채용 담당자다.  
-아래는 지원자의 레쥬메 "기술(스킬)" 섹션이다.  
-이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
+아래는 지원자의 레쥬메 중 "기술(스킬)" 항목이다.
+따라서 보통 기술스택은 여러줄로 종목별로 한줄로 나열되여있다.  
+다음 기준에 따라 4줄 이내로 피드백을 작성하라:  
 
-- 기술이 단순 나열이 아니라 실제 역량을 뒷받침할 수 있는지 드러나는가?  
-- 지원 직무와 직접적인 연관성이 있는가?  
-- 최신 기술 트렌드에 맞는 역량인지, 혹은 너무 범용적/추상적인 표현은 아닌가?  
-- 정확한 포맷으로 작성되어 있는가?
+- IT 분야와 직접 관련성이 있는가?  
+- 최신 기술 트렌드에 부합하는가, 너무 추상적이지 않은가?  
+- 포맷과 표현이 명확하고 일관적인가?  
 
 ${item.title}  
 ${item.startDate} ~ ${item.endDate}  
 ${item.text}  
+
 
 이 질문의 해답은 4줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
 항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;

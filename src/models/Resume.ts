@@ -6,6 +6,8 @@ export interface Item {
   startDate?: string;
   endDate?: string;
   review?: string;
+  companyAddress?: string;
+  oldText?: string;
 }
 
 export interface Session {
@@ -24,6 +26,7 @@ export interface Resume {
   sessions: Session[];
   status: string;
   lastModified: string;
+  review: string;
 }
 
 export interface ResumeMethods {
@@ -36,9 +39,11 @@ export type ResumeModel = Model<Resume, {}, ResumeMethods>;
 const itemSchema = new Schema(
   {
     title: { type: String, default: "title" },
+    companyAddress: { type: String },
     text: { type: String, required: true },
     startDate: { type: String },
     endDate: { type: String },
+    oldText: { type: String },
     review: { type: String },
   },
   { _id: false }
@@ -68,6 +73,7 @@ const resumeSchema = new Schema<Resume, ResumeModel, ResumeMethods>(
     sessions: { type: [sessionSchema], default: [] },
     status: { type: String, default: "draft" },
     lastModified: { type: String, default: "2024년 1월 15일" },
+    review: { type: String },
   },
   { timestamps: true }
 );

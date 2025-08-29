@@ -15,7 +15,7 @@ export interface User {
   skill?: string | null;
   region: string;
   interestJob: string;
-  level: "customer" | "pro"; 
+  level: "customer" | "pro";
   loginType: "local" | "google" | "github";
 }
 
@@ -38,10 +38,14 @@ const userSchema = new Schema<User, UserModel, UserMethods>(
     major: { type: String, default: null },
     career: { type: String, default: null },
     skill: { type: String, default: null },
-    region: { type: String, required: true },
-    interestJob: { type: String, required: true },
+    region: { type: String },
+    interestJob: { type: String },
     level: { type: String, enum: ["customer", "pro"], default: "customer" },
-    loginType: { type: String, enum: ["local", "google", "github"], default: "local" },
+    loginType: {
+      type: String,
+      enum: ["local", "google", "github"],
+      default: "local",
+    },
   },
   { timestamps: true }
 );
@@ -54,7 +58,7 @@ userSchema.methods.toJSON = function () {
   delete obj.createdAt;
   delete obj.__v;
   return obj;
-  };
+};
 
 /** 인스턴스 메서드 */
 userSchema.methods.generateToken = function (this: UserDoc): string {
@@ -65,7 +69,6 @@ userSchema.methods.generateToken = function (this: UserDoc): string {
     expiresIn: jwtCfg.expiresIn,
   });
 };
-
 
 const User = model<User, UserModel>("User", userSchema);
 export default User;

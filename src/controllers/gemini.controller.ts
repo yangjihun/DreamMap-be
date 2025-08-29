@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import config from "@config/config";
 import {
   roadmapPrompt,
@@ -7,7 +7,8 @@ import {
   experienceItemPrompt,
   projectItemPrompt,
   skillItemPrompt,
-  resumePrompt,
+  itemPatchPrompt,
+  resumeReviewPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
@@ -46,9 +47,10 @@ const geminiController = {
     }));
     return mappedData;
   },
-  generateReview: async (req: Request, res: Response) => {
+  generateReview: async (req: Request, res: Response, next: NextFunction) => {
     try {
       let item;
+      let length = 0;
       const resumeId = req.params.id;
       let resume = await Resume.findById(resumeId);
       if (!resume) {
@@ -58,6 +60,7 @@ const geminiController = {
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
           item = resume.sessions[i].items[j];
+          length += item.text.length;
           let prompt;
           if (sessionTitle === "Introduction") {
             prompt = introItemPrompt(item);
@@ -73,9 +76,49 @@ const geminiController = {
           const aiResponse = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,
+            config: {
+              thinkingConfig: {
+                thinkingBudget: 0, // Disables thinking -> 속도개선
+              },
+            },
           });
-          console.log(">>>>>>", aiResponse.text);
           item.review = aiResponse.text;
+          if (item.oldText) item.oldText = undefined;
+        }
+      }
+      resume.totalCount = length;
+      await resume.save();
+      next();
+    } catch (error: any) {
+      res.status(400).json({ status: "fail", message: error.message });
+    }
+  },
+  generateResume: async (req: Request, res: Response) => {
+    try {
+      const resumeId = req.params.id;
+      let item;
+      const resume = await Resume.findById(resumeId);
+      if (!resume) throw new Error("Resume not found");
+
+      for (let i = 0; i < resume.sessions.length; i++) {
+        for (let j = 0; j < resume.sessions[i].items.length; j++) {
+          let sessionTitle = resume.sessions[i].title;
+          if (
+            !["skills", "스킬"].some((keyword) =>
+              sessionTitle.includes(keyword)
+            )
+          ) {
+            item = resume.sessions[i].items[j];
+            const aiResponse = await ai.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: itemPatchPrompt(item),
+            });
+
+            if (aiResponse.text) {
+              item.oldText = item.text;
+              item.text = aiResponse.text;
+            }
+          }
         }
       }
       await resume.save();
@@ -84,29 +127,39 @@ const geminiController = {
       res.status(400).json({ status: "fail", message: error.message });
     }
   },
-  generateResume: async (req: Request, res: Response) => {
+  generateReviewWhole: async (req: Request, res: Response) => {
     try {
-      const { userId, resumeId } = req.body;
-      let item;
+      const resumeId = req.params.id;
       const resume = await Resume.findById(resumeId);
       if (!resume) throw new Error("Resume not found");
+      const aiResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: resumeReviewPrompt(resume),
+        config: {
+          thinkingConfig: {
+            thinkingBudget: 0, // Disables thinking -> 속도개선
+          },
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              review: { type: "string" },
+              score: { type: "number" },
+            },
+            required: ["review", "score"],
+            additionalProperties: false,
+          },
+        },
+      });
+      if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
 
-      for (let i = 0; i < resume.sessions.length; i++) {
-        for (let j = 0; j < resume.sessions[i].items.length; j++) {
-          let sessionTitle = resume.sessions[i].title;
-          item = resume.sessions[i].items[j];
-          const aiResponse = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: resumePrompt(item),
-          });
-          console.log(">>>>>>", aiResponse.text);
-          if (aiResponse.text) {
-            item.text = aiResponse.text;
-          }
-        }
-      }
+      const formatData = JSON.parse(aiResponse.text);
+      resume.review = formatData.review;
+      resume.score = formatData.score;
+      console.log("review", resume.review);
       await resume.save();
-      return res.status(200).json({ status: "success", data: resume });
+
+      return res.status(200).json({ status: "success", data: formatData });
     } catch (error: any) {
       res.status(400).json({ status: "fail", message: error.message });
     }
