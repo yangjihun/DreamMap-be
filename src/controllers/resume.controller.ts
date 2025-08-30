@@ -263,26 +263,6 @@ const resumeController = {
     }
   },
 
-  // createFromPdf: async (req: Request, res: Response, next: NextFunction) => {
-  //   try {
-  //     const { parsedSections, resumeTitle } = req.body;
-  //     const userId = (req as any).userId;
-
-  //     if (!parsedSections || !resumeTitle || !userId) {
-  //       return next(new AppError('분석된 데이터, 제목, 사용자 정보가 필요합니다.', 400));
-  //     }
-
-  //     // 1. 실제 로직은 서비스에 위임합니다.
-  //     const newResume = await resumeService.createFromPdf(userId, resumeTitle, parsedSections);
-
-  //     // 2. 컨트롤러는 성공 응답만 보냅니다.
-  //     res.status(201).json({ status: 'success', data: newResume.toJSON() });
-
-  //   } catch (error) {
-  //     return next(error);
-  //   }
-  // },
-
   createResumeFromPdf: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
