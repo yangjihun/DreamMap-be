@@ -27,6 +27,13 @@ export async function analyzePdfMiddleware(req: Request, res: Response, next: Ne
     // azure.service.ts의 함수를 호출하여 PDF 분석 및 그룹화 실행
     const parsedSections = await analyzePdfLayout(file.buffer);
 
+    // -------------------- [추가된 부분 시작] --------------------
+    // azure.service.ts가 반환한 최종 결과를 터미널에 출력합니다.
+    console.log("--- Azure AI 분석 결과 (parsedSections) ---");
+    console.log(parsedSections);
+    console.log("-------------------------------------------");
+    // -------------------- [추가된 부분 끝] --------------------
+
     // 분석된 결과를 req.body에 추가하여 다음 컨트롤러로 전달
     req.body.parsedSections = parsedSections;
 

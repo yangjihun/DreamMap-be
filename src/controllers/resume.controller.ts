@@ -263,44 +263,6 @@ const resumeController = {
     }
   },
 
-
-  // createFromPdf: async (req: Request, res: Response, next: NextFunction) => {
-  //   try {
-  //     const { parsedSections, resumeTitle } = req.body;
-  //     const userId = (req as any).userId;
-
-  //     if (!parsedSections || !resumeTitle || !userId) {
-  //       return next(new AppError('분석된 데이터, 제목, 사용자 정보가 필요합니다.', 400));
-  //     }
-
-  //     const sessions = Object.entries(parsedSections).map(([sectionTitle, contentArray]) => {
-  //       const items = (contentArray as string[]).map(text => ({
-  //         title: 'Parsed Item',
-  //         text: text,
-  //       }));
-
-  //       return {
-  //         key: sectionTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-  //         title: sectionTitle,
-  //         items: items,
-  //         wordCount: items.reduce((acc, item) => acc + (item.text?.length || 0), 0),
-  //       };
-  //     });
-
-  //     const newResume = new Resume({
-  //       userId,
-  //       title: resumeTitle,
-  //       sessions,
-  //       status: 'draft',
-  //     });
-
-  //     await newResume.save();
-  //     res.status(201).json({ status: 'success', data: newResume.toJSON() });
-
-  //   } catch (error) {
-  //     return next(error);
-  //   }
-  // },
   createFromPdf: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { parsedSections, resumeTitle } = req.body;

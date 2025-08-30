@@ -9,9 +9,54 @@ import {
   skillItemPrompt,
   itemPatchPrompt,
   resumeReviewPrompt,
+  degreeItemPrompt,
+  extractTextToJSON,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
+
+const resumeJsonSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string" },
+    totalCount: { type: "number" },
+    score: { type: "number" },
+    starred: { type: "boolean" },
+    sessions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          key: { type: "string" },
+          title: { type: "string" },
+          wordCount: { type: "number" },
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                text: { type: "string" },
+                startDate: { type: "string" },
+                endDate: { type: "string" },
+                review: { type: "string" },
+                companyAddress: { type: "string" },
+                oldText: { type: "string" },
+                degree: { type: "string" },
+              },
+              required: ["title", "text"],
+            },
+          },
+        },
+        required: ["key", "title", "items"],
+      },
+    },
+    status: { type: "string" },
+    lastModified: { type: "string" },
+    review: { type: "string" },
+  },
+  required: ["title", "sessions"],
+};
 
 const ai = new GoogleGenAI({
   apiKey: config.gemini.apiKey,
@@ -50,7 +95,8 @@ const geminiController = {
   generateReview: async (req: Request, res: Response, next: NextFunction) => {
     try {
       let item;
-      let length = 0;
+      let length = 0,
+        wordCount = 0;
       const resumeId = req.params.id;
       let resume = await Resume.findById(resumeId);
       if (!resume) {
@@ -61,6 +107,7 @@ const geminiController = {
           let sessionTitle = resume.sessions[i].title;
           item = resume.sessions[i].items[j];
           length += item.text.length;
+          wordCount += item.text.length;
           let prompt;
           if (sessionTitle === "Introduction") {
             prompt = introItemPrompt(item);
@@ -70,6 +117,8 @@ const geminiController = {
             prompt = projectItemPrompt(item);
           } else if (sessionTitle === "Skills") {
             prompt = skillItemPrompt(item);
+          } else if (sessionTitle === "Degree") {
+            prompt = degreeItemPrompt(item);
           } else {
             prompt = introItemPrompt(item); // fallback
           }
@@ -85,6 +134,8 @@ const geminiController = {
           item.review = aiResponse.text;
           if (item.oldText) item.oldText = undefined;
         }
+        resume.sessions[i].wordCount = wordCount;
+        wordCount = 0;
       }
       resume.totalCount = length;
       await resume.save();
@@ -104,19 +155,27 @@ const geminiController = {
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
           if (
-            !["skills", "스킬"].some((keyword) =>
-              sessionTitle.includes(keyword)
-            )
+            ![
+              "Skills",
+              "스킬",
+              "학력",
+              "Education",
+              "수상",
+              "인증",
+              "Award",
+              "Certificate",
+            ].some((keyword) => sessionTitle.includes(keyword))
           ) {
             item = resume.sessions[i].items[j];
-            const aiResponse = await ai.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: itemPatchPrompt(item),
-            });
-
-            if (aiResponse.text) {
-              item.oldText = item.text;
-              item.text = aiResponse.text;
+            if (!(item.oldText == item.text)) {
+              const aiResponse = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: itemPatchPrompt(item),
+              });
+              if (aiResponse.text) {
+                item.oldText = item.text;
+                item.text = aiResponse.text;
+              }
             }
           }
         }
@@ -161,6 +220,57 @@ const geminiController = {
 
       return res.status(200).json({ status: "success", data: formatData });
     } catch (error: any) {
+      res.status(400).json({ status: "fail", message: error.message });
+    }
+  },
+  generateJSON: async (req: Request, res: Response) => {
+    try {
+      const userId = (req as Request & { userId?: string }).userId;
+      const { text } = req.body;
+
+      if (!userId) {
+        return res
+          .status(401)
+          .json({ status: "fail", message: "인증이 필요합니다." });
+      }
+
+      if (!text || text.trim().length === 0) {
+        return res
+          .status(400)
+          .json({ status: "fail", message: "텍스트가 필요합니다." });
+      }
+
+      console.log(
+        "Generating resume from text:",
+        text.substring(0, 100) + "..."
+      );
+
+      const aiResponse = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: extractTextToJSON(text),
+        config: {
+          thinkingConfig: {
+            thinkingBudget: 0, // Disables thinking -> 속도개선
+          },
+          responseMimeType: "application/json",
+          responseSchema: resumeJsonSchema,
+        },
+      });
+
+      if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
+
+      const parsed = JSON.parse(aiResponse.text);
+
+      const resume = new Resume({
+        ...parsed,
+        userId,
+      });
+
+      await resume.save();
+
+      return res.status(200).json({ status: "success", data: resume });
+    } catch (error: any) {
+      console.error("Error in generateJSON:", error);
       res.status(400).json({ status: "fail", message: error.message });
     }
   },
