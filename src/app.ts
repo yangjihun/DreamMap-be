@@ -4,7 +4,6 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import indexRouter from "@routes/index";
 import config from "@config/config";
-import AppError from "@utils/appError"; 
 
 const app = express();
 app.use(cors());
@@ -17,13 +16,6 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
   // 어떤 요청에서 에러가 났는지 req 객체를 이용해 로그를 남긴다.
   console.error(`[${req.method}] ${req.originalUrl} - ERROR: ${error.message}`);
 
-  // // AppError의 인스턴스인 경우, 설정된 상태 코드와 메시지로 응답
-  // if (error instanceof AppError) {
-  //   return res.status(error.statusCode).json({
-  //     status: error.status || 'fail',
-  //     message: error.message,
-  //   });
-  // }
   // AppError에 정의된 isOperational 속성을 확인하여 운영 오류인지 판단합니다.
   if (error.isOperational) {
     // isOperational이 true인 경우, AppError에서 설정한 상태 코드와 메시지를 사용합니다.
@@ -33,7 +25,6 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     });
   }
   
-
   // 그 외의 예측하지 못한 에러는 500 서버 에러로 처리
   console.error('UNEXPECTED ERROR', error);
   return res.status(500).json({

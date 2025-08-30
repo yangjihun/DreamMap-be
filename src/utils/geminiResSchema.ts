@@ -55,3 +55,46 @@ export const roadmapGeminiSchema = {
     },
   },
 };
+
+export const resumeJsonSchema = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING },
+    totalCount: { type: Type.NUMBER },
+    score: { type: Type.NUMBER },
+    starred: { type: Type.BOOLEAN },
+    sessions: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          key: { type: Type.STRING },
+          title: { type: Type.STRING },
+          wordCount: { type: Type.NUMBER },
+          items: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                text: { type: Type.STRING },
+                startDate: { type: Type.STRING },
+                endDate: { type: Type.STRING },
+                review: { type: Type.STRING },
+                companyAddress: { type: Type.STRING },
+                oldText: { type: Type.STRING },
+                degree: { type: Type.STRING },
+              },
+              required: ["title", "text"],
+            },
+          },
+        },
+        required: ["key", "title", "items"],
+      },
+    },
+    status: { type: Type.STRING },
+    lastModified: { type: Type.STRING },
+    review: { type: Type.STRING },
+  },
+  required: ["title", "sessions"],
+};

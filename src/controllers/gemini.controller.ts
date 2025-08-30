@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Request, Response, NextFunction } from "express";
+import geminiService from "@services/gemini.service";
 import config from "@config/config";
 import {
   roadmapPrompt,
@@ -223,6 +224,57 @@ const geminiController = {
       res.status(400).json({ status: "fail", message: error.message });
     }
   },
+  // generateJSON: async (req: Request, res: Response) => {
+  //   try {
+  //     const userId = (req as Request & { userId?: string }).userId;
+  //     const { text } = req.body;
+
+  //     if (!userId) {
+  //       return res
+  //         .status(401)
+  //         .json({ status: "fail", message: "인증이 필요합니다." });
+  //     }
+
+  //     if (!text || text.trim().length === 0) {
+  //       return res
+  //         .status(400)
+  //         .json({ status: "fail", message: "텍스트가 필요합니다." });
+  //     }
+
+  //     console.log(
+  //       "Generating resume from text:",
+  //       text.substring(0, 100) + "..."
+  //     );
+
+  //     const aiResponse = await ai.models.generateContent({
+  //       model: "gemini-2.5-flash",
+  //       contents: extractTextToJSON(text),
+  //       config: {
+  //         thinkingConfig: {
+  //           thinkingBudget: 0, // Disables thinking -> 속도개선
+  //         },
+  //         responseMimeType: "application/json",
+  //         responseSchema: resumeJsonSchema,
+  //       },
+  //     });
+
+  //     if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
+
+  //     const parsed = JSON.parse(aiResponse.text);
+
+  //     const resume = new Resume({
+  //       ...parsed,
+  //       userId,
+  //     });
+
+  //     await resume.save();
+
+  //     return res.status(200).json({ status: "success", data: resume });
+  //   } catch (error: any) {
+  //     console.error("Error in generateJSON:", error);
+  //     res.status(400).json({ status: "fail", message: error.message });
+  //   }
+  // },
   generateJSON: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
@@ -234,41 +286,10 @@ const geminiController = {
           .json({ status: "fail", message: "인증이 필요합니다." });
       }
 
-      if (!text || text.trim().length === 0) {
-        return res
-          .status(400)
-          .json({ status: "fail", message: "텍스트가 필요합니다." });
-      }
+      // 핵심 로직을 서비스에 위임
+      const newResume = await geminiService.createResumeFromText(text, userId);
 
-      console.log(
-        "Generating resume from text:",
-        text.substring(0, 100) + "..."
-      );
-
-      const aiResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: extractTextToJSON(text),
-        config: {
-          thinkingConfig: {
-            thinkingBudget: 0, // Disables thinking -> 속도개선
-          },
-          responseMimeType: "application/json",
-          responseSchema: resumeJsonSchema,
-        },
-      });
-
-      if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
-
-      const parsed = JSON.parse(aiResponse.text);
-
-      const resume = new Resume({
-        ...parsed,
-        userId,
-      });
-
-      await resume.save();
-
-      return res.status(200).json({ status: "success", data: resume });
+      return res.status(201).json({ status: "success", data: newResume });
     } catch (error: any) {
       console.error("Error in generateJSON:", error);
       res.status(400).json({ status: "fail", message: error.message });
