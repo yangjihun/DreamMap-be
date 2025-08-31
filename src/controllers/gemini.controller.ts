@@ -114,11 +114,12 @@ const geminiController = {
               sessionTitle.includes(k)
             )
           ) {
-            length +=
+            length =
               (item.GPA?.toString() || "").length +
               item.title.length +
               (item.degree?.toString() || "").length +
               (item.endDate?.toString() || "").length;
+            console.log("length", item.degree?.toString());
           } else {
             length += item.text.length;
           }
