@@ -111,9 +111,17 @@ const geminiController = {
           let prompt;
           if (constant.some((k) => sessionTitle.includes(k))) {
             prompt = experienceItemPrompt(item);
-          } else if (sessionTitle === "Project") {
+          } else if (
+            ["Project", "프로젝트", "project"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
             prompt = projectItemPrompt(item);
-          } else if (["관련", "연관"].some((k) => sessionTitle.includes(k))) {
+          } else if (
+            ["관련", "연관", "relate", "related"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
             prompt = relatedItemPrompt(item);
           } else {
             prompt = ""; // fallback

@@ -74,7 +74,7 @@ ${item.text}
 ${item.review}
 
 피드백을 참고하여 이 파트를 수정하라. 단 너의 서술은 제거하라. 또한 제목도 제거하라(예:${item.title}).
-Remove all * characters and generate bullet points using • instead.  
+Remove all * characters and generate bullet points using • instead.
 You may choose the appropriate number of bullet points depending on the content. 
 무엇보다도 간략하고 파워풀하게 생성하라. 줄바꿈은 최대 한줄로 하라.
 
@@ -141,6 +141,7 @@ ${text}
 유저 기본정보도 아이템 타이틀 "개인정보" 에 저장하고 ,mail 이나 gmail 이나, github 등등을 아이템으로 넣으라, 개이정보 에 있는 아이템 텍스트는 bullet point가 없어도 됨.
 스키마에 들어갈때 item text는 bullet point로 시작하게 하라. 
 Each bullet point should be separated by a newline character (\n).
+Item.text should be generated in a way such that each skill stack is sepertaed by a comma.
 
 import { Schema, model, Model, HydratedDocument, Types } from "mongoose";
 
