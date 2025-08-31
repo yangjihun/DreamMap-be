@@ -23,12 +23,13 @@ AI 기반 **레쥬메 리뷰 서비스**
 
 ## Tech Stack
 
--Back-end :	Node.js, Express, MongoDB
--Front-end :	React, React-Thunk
--Language :	Typescript, Tailwind CSS
--API :	Gemini, Azure
--DevOps :	Heroku, Netlify
-
+| 구분 | 기술 |
+| :--- | :--- |
+| **Back-end** | `Node.js`, `Express`, `MongoDB` |
+| **Front-end** | `React`, `React-Thunk` |
+| **Language** | `Typescript`, `Tailwind CSS` |
+| **API** | `Gemini`, `Azure` |
+| **DevOps** | `Heroku`, `Netlify` |
 ---
 
 ## 프로젝트 실행 방법
@@ -48,23 +49,24 @@ npm run dev
 ---
 
 ## API 엔드포인트
-Method |	Endpoint	                                    | 설명
-POST	 | /auth/signup	                                  | 회원가입
-POST	 | /auth/login	                                  | 로그인
-GET	   | /user/me	                                      | 내 정보 조회
-POST	 | /resume/new	                                  | PDF 이력서 업로드로 새 이력서 생성
-POST	 | /resume/new/sections                           |	섹션별 텍스트 입력으로 새 이력서 생성
-GET	   | /resume/all	                                  | 사용자의 모든 이력서 목록 조회
-GET	   | /resume/:id	                                  | 특정 이력서 정보 조회
-PATCH	 | /resume/:id	                                  | 특정 이력서 수정
-DELETE | /resume/:id	                                  | 특정 이력서 삭제
-PUT	   | /resume/:id/star	                              | 이력서 즐겨찾기(별표) 토글
-DELETE | /resume/:id/session/:sessionKey	              | 이력서 내 특정 세션 삭제
-POST	 | /gemini/review/:id	                            | 이력서 전체 리뷰 및 점수 생성
-POST	 | /gemini/generate/:id                           |	AI 피드백을 바탕으로 이력서 내용 수정
-POST	 | /roadmap/:id	                                  | 로드맵 생성
-GET	   | /roadmap/:id	                                  | 로드맵 조회
-PUT	   | /roadmap/:resumeId/resource/:resourceId/state	| 로드맵 리소스의 완료 상태 토글
+| Method | Endpoint | 설명 |
+| :--- | :--- | :--- |
+| **POST** | `/auth/signup` | 회원가입 |
+| **POST** | `/auth/login` | 로그인 |
+| **GET** | `/user/me` | 내 정보 조회 |
+| **POST** | `/resume/new` | PDF 이력서 업로드로 새 이력서 생성 |
+| **POST** | `/resume/new/sections` | 섹션별 텍스트 입력으로 새 이력서 생성 |
+| **GET** | `/resume/all` | 사용자의 모든 이력서 목록 조회 |
+| **GET** | `/resume/:id` | 특정 이력서 정보 조회 |
+| **PATCH** | `/resume/:id` | 특정 이력서 수정 |
+| **DELETE** | `/resume/:id` | 특정 이력서 삭제 |
+| **PUT** | `/resume/:id/star` | 이력서 즐겨찾기(별표) 토글 |
+| **DELETE** | `/resume/:id/session/:sessionKey` | 이력서 내 특정 세션 삭제 |
+| **POST** | `/gemini/review/:id` | 이력서 전체 리뷰 및 점수 생성 |
+| **POST** | `/gemini/generate/:id` | AI 피드백을 바탕으로 이력서 내용 수정 |
+| **POST** | `/roadmap/:id` | 로드맵 생성 |
+| **GET** | `/roadmap/:id` | 로드맵 조회 |
+| **PUT** | `/roadmap/:resumeId/resource/:resourceId/state` | 로드맵 리소스의 완료 상태 토글 |
 
 ---
 
@@ -178,7 +180,7 @@ footer
 PORT=5000
 NODE_ENV=development
 LOCAL_DB_ADDRESS=...
-MONGODB_URI_PROD =...
+MONGODB_URI_PROD=...
 JWT_SECRET_KEY=...
 AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=...
 AZURE_DOCUMENT_INTELLIGENCE_KEY=...
