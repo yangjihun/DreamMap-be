@@ -6,9 +6,11 @@ export interface Item {
   startDate?: string;
   endDate?: string;
   review?: string;
-  companyAddress?: string;
+  company?: string;
   oldText?: string;
   degree?: string;
+  GPA?: Number;
+  role?: string;
 }
 
 export interface Session {
@@ -41,13 +43,15 @@ export type ResumeModel = Model<Resume, {}, ResumeMethods>;
 const itemSchema = new Schema(
   {
     title: { type: String, default: "title" },
-    companyAddress: { type: String },
-    text: { type: String, required: true },
+    company: { type: String },
+    role: { type: String },
+    text: { type: String },
     startDate: { type: String },
     endDate: { type: String },
     oldText: { type: String },
     review: { type: String },
     degree: { type: String },
+    GPA: { type: Number },
   },
   { _id: false }
 );

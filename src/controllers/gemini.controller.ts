@@ -11,6 +11,7 @@ import {
   extractTextToJSON,
   relatedItemPrompt,
   introItemPrompt,
+  activityItemPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
@@ -40,9 +41,10 @@ const resumeJsonSchema = {
                 startDate: { type: "string" },
                 endDate: { type: "string" },
                 review: { type: "string" },
-                companyAddress: { type: "string" },
                 oldText: { type: "string" },
                 degree: { type: "string" },
+                companyOrRole: { type: "string" },
+                GPA: { type: "number" },
               },
               required: ["title", "text"],
             },
@@ -107,29 +109,48 @@ const geminiController = {
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
           item = resume.sessions[i].items[j];
-          length += item.text.length;
+          if (
+            ["EDUCATION", "학력", "education"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
+            length =
+              (item.GPA?.toString() || "").length +
+              item.title.length +
+              (item.degree?.toString() || "").length +
+              (item.endDate?.toString() || "").length;
+            console.log("length", item.degree?.toString());
+          } else {
+            length += item.text.length;
+          }
           wordCount += item.text.length;
           let prompt;
           if (constant.some((k) => sessionTitle.includes(k))) {
             prompt = experienceItemPrompt(item);
           } else if (
-            ["Project", "프로젝트", "project"].some((k) =>
+            ["Project", "프로젝트", "project", "PROJECT"].some((k) =>
               sessionTitle.includes(k)
             )
           ) {
             prompt = projectItemPrompt(item);
           } else if (
-            ["관련", "연관", "relate", "related"].some((k) =>
-              sessionTitle.includes(k)
+            ["관련", "연관", "relate", "related", "RELATED", "EXPERIENCE"].some(
+              (k) => sessionTitle.includes(k)
             )
           ) {
             prompt = relatedItemPrompt(item);
           } else if (
-            ["introduction", "자기소개", "Intro", "intro"].some((k) =>
+            ["introduction", "자기소개", "Intro", "intro", "INTRO"].some((k) =>
               sessionTitle.includes(k)
             )
           ) {
             prompt = introItemPrompt(item);
+          } else if (
+            ["ACTIVIT", "activity", "활동"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
+            prompt = activityItemPrompt(item);
           } else {
             prompt = ""; // fallback
           }
@@ -165,18 +186,36 @@ const geminiController = {
       let item;
       const resume = await Resume.findById(resumeId);
       if (!resume) throw new Error("Resume not found");
+      const skipSections = [
+        "PERSONAL",
+        "개인정보",
+        "EDUCATION",
+        "학력",
+        "SKILL",
+        "기술",
+        "스킬",
+        "skill",
+        "education",
+        "person",
+      ];
 
       for (let i = 0; i < resume.sessions.length; i++) {
+        if (skipSections.some((k) => resume.sessions[i].title.includes(k)))
+          continue;
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
           item = resume.sessions[i].items[j];
-          if (item.review !== "선택된 항목에 대한 이전 AI 리뷰가 없습니다.") {
+          if (
+            item.review &&
+            item.review !== "선택된 항목에 대한 이전 AI 리뷰가 없습니다."
+          ) {
             {
-              if (!(item.oldText == item.text)) {
+              if (!item.oldText || item.oldText !== item.text) {
                 const aiResponse = await ai.models.generateContent({
                   model: "gemini-2.5-flash",
                   contents: itemPatchPrompt(item),
                 });
+                console.log("aiResponse", aiResponse.text);
                 if (aiResponse.text) {
                   item.oldText = item.text;
                   item.text = aiResponse.text;
@@ -186,8 +225,8 @@ const geminiController = {
           }
         }
         await resume.save();
-        return res.status(200).json({ status: "success", data: resume });
       }
+      return res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
       res.status(400).json({ status: "fail", message: error.message });
     }
