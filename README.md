@@ -92,7 +92,7 @@ npm run dev
   /tests         # 테스트 코드
   /utils         # 공통 유틸
   app.ts         # 서버 엔트리: Express 초기화 · 공통 미들웨어 등록 · 라우트 마운트 · 에러핸들러 · DB 연결/리스닝
-  
+ ``` 
   
 ---
 
@@ -185,7 +185,6 @@ JWT_SECRET_KEY=...
 AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT=...
 AZURE_DOCUMENT_INTELLIGENCE_KEY=...
 GEMINI_API_KEY=...
-
 ```
 
 
