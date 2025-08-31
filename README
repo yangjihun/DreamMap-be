@@ -1,5 +1,0 @@
-# Command
-npm i typescript ts-node-dev tsconfig-paths @types/node @types/express @types/body-parser @types/cors dotenv mongoose @google/genai zod @azure/ai-form-recognizer
-
-# To Run
-npm run dev
