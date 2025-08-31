@@ -188,6 +188,7 @@ ${text}
 - 예외2: SKILLS 섹션의 item.text는 bullet 없이, 한 아이템 내 스킬들을 쉼표+공백(", ")로 구분한다.
 
 [PERSONAL INFO]
+- Please bring this information in the schema.
 - 섹션 제목: 영어면 "PERSONAL INFO", 한국어면 "개인정보".
 - 이메일(mail/gmail), GitHub, 기타 연락처/링크를 각각 아이템으로 추가한다.
 - 이 섹션의 item.text는 bullet을 붙이지 않는다.
