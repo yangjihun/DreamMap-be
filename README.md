@@ -173,7 +173,7 @@ footer
 -현재는 별도의 서버 없이 로컬 환경에서 기능 점검을 진행하고 있으나, 
  추후 develop 브랜치를 배포하는 독립된 Staging 서버를 구축할 예정
 
----
+
 
 ## 🔧 환경 변수
 ```
@@ -187,7 +187,7 @@ AZURE_DOCUMENT_INTELLIGENCE_KEY=...
 GEMINI_API_KEY=...
 ```
 
----
+
 
 ## 🤝 Git Workflow
 - 브랜치 전략:  
