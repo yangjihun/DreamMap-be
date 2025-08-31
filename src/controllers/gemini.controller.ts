@@ -145,8 +145,8 @@ const geminiController = {
             });
             if (aiResponse.text) {
               item.review = aiResponse.text;
-              if (item.oldText) item.oldText = undefined;
             }
+            if (item.oldText) item.oldText = undefined;
           }
         }
         resume.sessions[i].wordCount = wordCount;
