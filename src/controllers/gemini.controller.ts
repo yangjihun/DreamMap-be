@@ -110,30 +110,31 @@ const geminiController = {
           length += item.text.length;
           wordCount += item.text.length;
           let prompt;
-          if (sessionTitle === "Introduction") {
-            prompt = introItemPrompt(item);
-          } else if (sessionTitle === "Work Experience") {
+          if (
+            sessionTitle === "Work Experience" ||
+            sessionTitle === "Leadership Experience"
+          ) {
             prompt = experienceItemPrompt(item);
           } else if (sessionTitle === "Project") {
             prompt = projectItemPrompt(item);
-          } else if (sessionTitle === "Skills") {
-            prompt = skillItemPrompt(item);
-          } else if (sessionTitle === "Degree") {
-            prompt = degreeItemPrompt(item);
           } else {
-            prompt = introItemPrompt(item); // fallback
+            prompt = ""; // fallback
           }
-          const aiResponse = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-              thinkingConfig: {
-                thinkingBudget: 0, // Disables thinking -> 속도개선
+          if (prompt !== "") {
+            const aiResponse = await ai.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: prompt,
+              config: {
+                thinkingConfig: {
+                  thinkingBudget: 0, // Disables thinking -> 속도개선
+                },
               },
-            },
-          });
-          item.review = aiResponse.text;
-          if (item.oldText) item.oldText = undefined;
+            });
+            if (aiResponse.text) {
+              item.review = aiResponse.text;
+              if (item.oldText) item.oldText = undefined;
+            }
+          }
         }
         resume.sessions[i].wordCount = wordCount;
         wordCount = 0;
@@ -155,34 +156,25 @@ const geminiController = {
       for (let i = 0; i < resume.sessions.length; i++) {
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
-          if (
-            ![
-              "Skills",
-              "스킬",
-              "학력",
-              "Education",
-              "수상",
-              "인증",
-              "Award",
-              "Certificate",
-            ].some((keyword) => sessionTitle.includes(keyword))
-          ) {
-            item = resume.sessions[i].items[j];
-            if (!(item.oldText == item.text)) {
-              const aiResponse = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: itemPatchPrompt(item),
-              });
-              if (aiResponse.text) {
-                item.oldText = item.text;
-                item.text = aiResponse.text;
+          item = resume.sessions[i].items[j];
+          if (item.review !== "선택된 항목에 대한 이전 AI 리뷰가 없습니다.") {
+            {
+              if (!(item.oldText == item.text)) {
+                const aiResponse = await ai.models.generateContent({
+                  model: "gemini-2.5-flash",
+                  contents: itemPatchPrompt(item),
+                });
+                if (aiResponse.text) {
+                  item.oldText = item.text;
+                  item.text = aiResponse.text;
+                }
               }
             }
           }
         }
+        await resume.save();
+        return res.status(200).json({ status: "success", data: resume });
       }
-      await resume.save();
-      return res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
       res.status(400).json({ status: "fail", message: error.message });
     }
@@ -278,7 +270,7 @@ const geminiController = {
   generateJSON: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
-      const { text } = req.body;
+      const { text, resumeTitle } = req.body;
 
       if (!userId) {
         return res
@@ -287,7 +279,11 @@ const geminiController = {
       }
 
       // 핵심 로직을 서비스에 위임
-      const newResume = await geminiService.createResumeFromText(text, userId);
+      const newResume = await geminiService.createResumeFromText(
+        text,
+        resumeTitle,
+        userId
+      );
 
       return res.status(201).json({ status: "success", data: newResume });
     } catch (error: any) {

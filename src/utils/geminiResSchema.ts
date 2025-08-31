@@ -95,6 +95,7 @@ export const resumeJsonSchema = {
     status: { type: Type.STRING },
     lastModified: { type: Type.STRING },
     review: { type: Type.STRING },
+    name: { type: Type.STRING },
   },
   required: ["title", "sessions"],
 };

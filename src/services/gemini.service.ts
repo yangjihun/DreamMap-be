@@ -16,6 +16,7 @@ const ai = new GoogleGenAI({
  */
 async function createResumeFromText(
   text: string,
+  resumeTitle: string,
   userId: string
 ): Promise<ResumeDoc> {
   if (!text || text.trim().length === 0) {
@@ -45,6 +46,7 @@ async function createResumeFromText(
   const newResume = new Resume({
     ...parsedData,
     userId,
+    title: resumeTitle,
     status: "draft", // 초기 상태는 draft로 설정
   });
 

@@ -28,6 +28,7 @@ export interface Resume {
   status: string;
   lastModified: string;
   review: string;
+  name: string;
 }
 
 export interface ResumeMethods {
@@ -76,6 +77,7 @@ const resumeSchema = new Schema<Resume, ResumeModel, ResumeMethods>(
     status: { type: String, default: "draft" },
     lastModified: { type: String, default: "2024년 1월 15일" },
     review: { type: String },
+    name: { type: String },
   },
   { timestamps: true }
 );
