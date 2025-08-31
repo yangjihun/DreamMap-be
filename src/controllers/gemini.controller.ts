@@ -4,14 +4,12 @@ import geminiService from "@services/gemini.service";
 import config from "@config/config";
 import {
   roadmapPrompt,
-  introItemPrompt,
   experienceItemPrompt,
   projectItemPrompt,
-  skillItemPrompt,
   itemPatchPrompt,
   resumeReviewPrompt,
-  degreeItemPrompt,
   extractTextToJSON,
+  relatedItemPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
@@ -98,6 +96,7 @@ const geminiController = {
       let item;
       let length = 0,
         wordCount = 0;
+      const constant = ["Work", "Leadership", "리더십", "경력"];
       const resumeId = req.params.id;
       let resume = await Resume.findById(resumeId);
       if (!resume) {
@@ -110,13 +109,12 @@ const geminiController = {
           length += item.text.length;
           wordCount += item.text.length;
           let prompt;
-          if (
-            sessionTitle === "Work Experience" ||
-            sessionTitle === "Leadership Experience"
-          ) {
+          if (constant.some((k) => sessionTitle.includes(k))) {
             prompt = experienceItemPrompt(item);
           } else if (sessionTitle === "Project") {
             prompt = projectItemPrompt(item);
+          } else if (["관련", "연관"].some((k) => sessionTitle.includes(k))) {
+            prompt = relatedItemPrompt(item);
           } else {
             prompt = ""; // fallback
           }
