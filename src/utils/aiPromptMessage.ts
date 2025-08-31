@@ -80,6 +80,21 @@ You may choose the appropriate number of bullet points depending on the content.
 
 `;
 
+export const introItemPrompt = (item: any) =>
+  `너는 IT 기업의 시니어 채용 담당자다.  
+아래는 지원자의 레쥬메 중 "자기소개(요약)" 섹션이다.  
+이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
+
+- 지원자의 자신감이 드러나는가? 지원자의 열정이 보이는가? 
+- 불필요하게 장황하지 않고 간결하면서도 설득력 있는가?  
+
+${item.title}  
+${item.text}  
+
+이 파트는 자기 소개 파트이기 때문에 좀 더 어떤 사람인지 IT 분야에 열정이 있는지 잘 표현했느냐에 초점을 맞춰 평가하라.
+이 질문의 해답은 3줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
+항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
+
 export const relatedItemPrompt = (item: any) =>
   `너는 IT 기업의 시니어 채용 담당자다.  
 아래는 지원자의 레쥬메 중 "관련경력" 섹션이다.  
@@ -237,24 +252,15 @@ const Resume = model<Resume, ResumeModel>("Resume", resumeSchema);
 export default Resume;
 export { Resume };
 
+저장할때, personal_info -> education/degree -> 
+introduction ->project experience -> related experience ->
+leadership experience ->work experience ->
+skills -> certificate -> award -> closing/summary 순으로 저장하라(없으면 안 넣어도 된다).
+
 
 `;
 
-/*export const introItemPrompt = (item: any) =>
-  `너는 IT 기업의 시니어 채용 담당자다.  
-아래는 지원자의 레쥬메 중 "자기소개(요약)" 섹션이다.  
-이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
-
-- 지원자의 커리어 목표와 역량이 명확하게 드러나는가?  
-- 회사/직무와의 적합성이 설명되는가?  
-- 불필요하게 장황하지 않고 간결하면서도 설득력 있는가?  
-
-${item.title}  
-${item.text}  
-
-우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
-이 질문의 해답은 3줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
-항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
+/*
 
 
 

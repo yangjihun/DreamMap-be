@@ -10,6 +10,7 @@ import {
   resumeReviewPrompt,
   extractTextToJSON,
   relatedItemPrompt,
+  introItemPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
@@ -123,6 +124,12 @@ const geminiController = {
             )
           ) {
             prompt = relatedItemPrompt(item);
+          } else if (
+            ["introduction", "자기소개", "Intro", "intro"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
+            prompt = introItemPrompt(item);
           } else {
             prompt = ""; // fallback
           }
