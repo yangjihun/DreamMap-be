@@ -6,6 +6,9 @@ export const signUpSchema = z.object({
   password: z
     .string()
     .min(6, { message: "비밀번호는 최소 6자 이상이어야 합니다." }),
+  passwordConfirm: z
+    .string()
+    .min(6, { message: "비밀번호 확인을 입력해주세요." }),
   name: z.string().min(1, { message: "이름은 필수입니다." }),
   // region: z.string().min(1, { message: "region은 필수입니다." }),
   // interestJob: z.string().min(1, { message: "관심 직무는 필수입니다." }),
@@ -19,6 +22,10 @@ export const signUpSchema = z.object({
   // 선택: 기본값은 모델에서 customer/local
   level: z.enum(["customer", "pro"]).optional(),
   loginType: z.enum(["local", "google", "github"]).optional(),
+})
+.refine((data) => data.password === data.passwordConfirm, {
+  message: "비밀번호가 일치하지 않습니다.",
+  path: ["passwordConfirm"],
 });
 
 export type SignUpDto = z.infer<typeof signUpSchema>;

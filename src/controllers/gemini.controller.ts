@@ -1,16 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Request, Response, NextFunction } from "express";
+import geminiService from "@services/gemini.service";
 import config from "@config/config";
 import {
   roadmapPrompt,
-  introItemPrompt,
   experienceItemPrompt,
   projectItemPrompt,
-  skillItemPrompt,
   itemPatchPrompt,
   resumeReviewPrompt,
-  degreeItemPrompt,
   extractTextToJSON,
+  relatedItemPrompt,
+  introItemPrompt,
 } from "@utils/aiPromptMessage";
 import { roadmapGeminiSchema } from "@utils/geminiResSchema";
 import Resume from "@models/Resume";
@@ -97,6 +97,7 @@ const geminiController = {
       let item;
       let length = 0,
         wordCount = 0;
+      const constant = ["Work", "Leadership", "리더십", "경력"];
       const resumeId = req.params.id;
       let resume = await Resume.findById(resumeId);
       if (!resume) {
@@ -109,30 +110,44 @@ const geminiController = {
           length += item.text.length;
           wordCount += item.text.length;
           let prompt;
-          if (sessionTitle === "Introduction") {
-            prompt = introItemPrompt(item);
-          } else if (sessionTitle === "Work Experience") {
+          if (constant.some((k) => sessionTitle.includes(k))) {
             prompt = experienceItemPrompt(item);
-          } else if (sessionTitle === "Project") {
+          } else if (
+            ["Project", "프로젝트", "project"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
             prompt = projectItemPrompt(item);
-          } else if (sessionTitle === "Skills") {
-            prompt = skillItemPrompt(item);
-          } else if (sessionTitle === "Degree") {
-            prompt = degreeItemPrompt(item);
+          } else if (
+            ["관련", "연관", "relate", "related"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
+            prompt = relatedItemPrompt(item);
+          } else if (
+            ["introduction", "자기소개", "Intro", "intro"].some((k) =>
+              sessionTitle.includes(k)
+            )
+          ) {
+            prompt = introItemPrompt(item);
           } else {
-            prompt = introItemPrompt(item); // fallback
+            prompt = ""; // fallback
           }
-          const aiResponse = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-              thinkingConfig: {
-                thinkingBudget: 0, // Disables thinking -> 속도개선
+          if (prompt !== "") {
+            const aiResponse = await ai.models.generateContent({
+              model: "gemini-2.5-flash",
+              contents: prompt,
+              config: {
+                thinkingConfig: {
+                  thinkingBudget: 0, // Disables thinking -> 속도개선
+                },
               },
-            },
-          });
-          item.review = aiResponse.text;
-          if (item.oldText) item.oldText = undefined;
+            });
+            if (aiResponse.text) {
+              item.review = aiResponse.text;
+            }
+            if (item.oldText) item.oldText = undefined;
+          }
         }
         resume.sessions[i].wordCount = wordCount;
         wordCount = 0;
@@ -154,34 +169,25 @@ const geminiController = {
       for (let i = 0; i < resume.sessions.length; i++) {
         for (let j = 0; j < resume.sessions[i].items.length; j++) {
           let sessionTitle = resume.sessions[i].title;
-          if (
-            ![
-              "Skills",
-              "스킬",
-              "학력",
-              "Education",
-              "수상",
-              "인증",
-              "Award",
-              "Certificate",
-            ].some((keyword) => sessionTitle.includes(keyword))
-          ) {
-            item = resume.sessions[i].items[j];
-            if (!(item.oldText == item.text)) {
-              const aiResponse = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: itemPatchPrompt(item),
-              });
-              if (aiResponse.text) {
-                item.oldText = item.text;
-                item.text = aiResponse.text;
+          item = resume.sessions[i].items[j];
+          if (item.review !== "선택된 항목에 대한 이전 AI 리뷰가 없습니다.") {
+            {
+              if (!(item.oldText == item.text)) {
+                const aiResponse = await ai.models.generateContent({
+                  model: "gemini-2.5-flash",
+                  contents: itemPatchPrompt(item),
+                });
+                if (aiResponse.text) {
+                  item.oldText = item.text;
+                  item.text = aiResponse.text;
+                }
               }
             }
           }
         }
+        await resume.save();
+        return res.status(200).json({ status: "success", data: resume });
       }
-      await resume.save();
-      return res.status(200).json({ status: "success", data: resume });
     } catch (error: any) {
       res.status(400).json({ status: "fail", message: error.message });
     }
@@ -223,10 +229,61 @@ const geminiController = {
       res.status(400).json({ status: "fail", message: error.message });
     }
   },
+  // generateJSON: async (req: Request, res: Response) => {
+  //   try {
+  //     const userId = (req as Request & { userId?: string }).userId;
+  //     const { text } = req.body;
+
+  //     if (!userId) {
+  //       return res
+  //         .status(401)
+  //         .json({ status: "fail", message: "인증이 필요합니다." });
+  //     }
+
+  //     if (!text || text.trim().length === 0) {
+  //       return res
+  //         .status(400)
+  //         .json({ status: "fail", message: "텍스트가 필요합니다." });
+  //     }
+
+  //     console.log(
+  //       "Generating resume from text:",
+  //       text.substring(0, 100) + "..."
+  //     );
+
+  //     const aiResponse = await ai.models.generateContent({
+  //       model: "gemini-2.5-flash",
+  //       contents: extractTextToJSON(text),
+  //       config: {
+  //         thinkingConfig: {
+  //           thinkingBudget: 0, // Disables thinking -> 속도개선
+  //         },
+  //         responseMimeType: "application/json",
+  //         responseSchema: resumeJsonSchema,
+  //       },
+  //     });
+
+  //     if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
+
+  //     const parsed = JSON.parse(aiResponse.text);
+
+  //     const resume = new Resume({
+  //       ...parsed,
+  //       userId,
+  //     });
+
+  //     await resume.save();
+
+  //     return res.status(200).json({ status: "success", data: resume });
+  //   } catch (error: any) {
+  //     console.error("Error in generateJSON:", error);
+  //     res.status(400).json({ status: "fail", message: error.message });
+  //   }
+  // },
   generateJSON: async (req: Request, res: Response) => {
     try {
       const userId = (req as Request & { userId?: string }).userId;
-      const { text } = req.body;
+      const { text, resumeTitle } = req.body;
 
       if (!userId) {
         return res
@@ -234,41 +291,14 @@ const geminiController = {
           .json({ status: "fail", message: "인증이 필요합니다." });
       }
 
-      if (!text || text.trim().length === 0) {
-        return res
-          .status(400)
-          .json({ status: "fail", message: "텍스트가 필요합니다." });
-      }
-
-      console.log(
-        "Generating resume from text:",
-        text.substring(0, 100) + "..."
+      // 핵심 로직을 서비스에 위임
+      const newResume = await geminiService.createResumeFromText(
+        text,
+        resumeTitle,
+        userId
       );
 
-      const aiResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: extractTextToJSON(text),
-        config: {
-          thinkingConfig: {
-            thinkingBudget: 0, // Disables thinking -> 속도개선
-          },
-          responseMimeType: "application/json",
-          responseSchema: resumeJsonSchema,
-        },
-      });
-
-      if (!aiResponse.text) throw new Error("AI 응답이 없습니다.");
-
-      const parsed = JSON.parse(aiResponse.text);
-
-      const resume = new Resume({
-        ...parsed,
-        userId,
-      });
-
-      await resume.save();
-
-      return res.status(200).json({ status: "success", data: resume });
+      return res.status(201).json({ status: "success", data: newResume });
     } catch (error: any) {
       console.error("Error in generateJSON:", error);
       res.status(400).json({ status: "fail", message: error.message });
