@@ -20,7 +20,8 @@ type LoginWithEmailParams = {
 //@returns 생성된 사용자와 인증 토큰
  
 async function register(createUserData: any): Promise<AuthResult> {
-  const user = await userService.createUser(createUserData);
+  const { passwordConfirm, ...userData } = createUserData;
+  const user = await userService.createUser(userData);
   const token: string = await user.generateToken();
   return { user, token };
 }
