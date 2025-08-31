@@ -50,7 +50,8 @@ ${resume.sessions
 ${session.items
   .map((item: Item) => {
     let t = `${item.title}`;
-    if (item.companyAddress) t += `\n${item.companyAddress}`;
+    if (item.company) t += `\n${item.company}`;
+    if (item.role) t += `\n${item.role}`;
     if (item.startDate && item.endDate)
       t += `\n(${item.startDate} ~ ${item.endDate})`;
     t += `\n  ${item.text}`;
@@ -148,15 +149,60 @@ ${item.text}
 이 질문의 해답은 4줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
 항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
 
+export const activityItemPrompt = (item: any) => `
+너는 IT 기업의 시니어 채용 담당자다.  
+아래는 지원자의 레쥬메 중 "활동" 섹션이다.  
+이 항목의 내용을 검토하고, 다음 기준에 따라 피드백을 작성하라:  
+${item.title}  
+${item.startDate} ~ ${item.endDate}  
+${item.text}  
+
+- 활동의 목표와 결과물이 명확하게 서술되어 있는가?  
+- 본인의 역할과 기여도가 분명히 구분되는가?  
+- 리더쉽이 드러나는가? 팀워크가 드러나는가?
+- 어떤 스킬이 드러나는가?
+
+우선 긍정적인 점을 평가하고 그 이후에 개선할 부분을 평가하라.
+이 질문의 해답은 4줄 이내로 작성하라(최대한 간략하게 유저 안내문 같은 불필요한것은 빼고 핵심만 포함하라). 
+항목에 드러난 내용만 평가하라. 그리고 들여쓰기랑 글자 스타일 모두 제거하고 줄바꿈 최대 한줄로 하라.`;
+
 export const extractTextToJSON = (text: string) => `
 아래는 유저의 리쥬메 전체 내용이다.
 ${text}
 
-이 내용을 아래래의 스키마에 맞춰 JSON 형식으로 추출해서 출력하라.
-유저 기본정보도 아이템 타이틀 "개인정보" 에 저장하고 ,mail 이나 gmail 이나, github 등등을 아이템으로 넣으라, 개이정보 에 있는 아이템 텍스트는 bullet point가 없어도 됨.
-스키마에 들어갈때 item text는 bullet point로 시작하게 하라. 
-Each bullet point should be separated by a newline character (\n).
-Item.text should be generated in a way such that each skill stack is sepertaed by a comma.
+아래 텍스트를 주어진 스키마(JSON)로만 추출해 출력하라. 추가 설명/코드블록 금지, 스키마 밖 키 금지.
+
+[섹션 공통 규칙]
+- 기본: item.text는 각 줄이 '• '로 시작하며 줄바꿈(\n)으로 구분한다. ** 제일 중요하다!!
+- Each bullet point should be separated by a newline character (\n). !! important!!
+- 예외1: PERSONAL INFO(한국어면 "개인정보") 섹션의 item.text는 bullet 없이 평문으로 넣는다.
+- 예외2: SKILLS 섹션의 item.text는 bullet 없이, 한 아이템 내 스킬들을 쉼표+공백(", ")로 구분한다.
+
+[PERSONAL INFO]
+- 섹션 제목: 영어면 "PERSONAL INFO", 한국어면 "개인정보".
+- 이메일(mail/gmail), GitHub, 기타 연락처/링크를 각각 아이템으로 추가한다.
+- 이 섹션의 item.text는 bullet을 붙이지 않는다.
+
+[EDUCATION]
+- item.title에는 학교 이름만 넣는다.
+- item.text는 빈 문자열("")로 둔다.
+- major에는 전공명을 넣는다.
+- GPA는 반드시 추출하여 item.GPA에 넣고, 소수점 둘째 자리까지 포맷한다(예: 3.87).
+- EDUCATION 섹션에는 item 하나밖에 없다.
+
+[SKILLS]
+- bullet 제거(평문).
+- 한 아이템의 스킬들은 ", "로 구분한다.
+
+[경력 companyOrRole 규칙]
+- 회사명이 있으면 companyOrRole = 회사명.
+- 회사명이 없고 역할/직책(role/position/title)이 있으면 companyOrRole = 그 역할.
+- 둘 다 없으면 companyOrRole = "".
+
+
+[oldText 규칙]
+- oldText는 빼라.
+
 
 import { Schema, model, Model, HydratedDocument, Types } from "mongoose";
 
@@ -166,9 +212,10 @@ export interface Item {
   startDate?: string;
   endDate?: string;
   review?: string;
-  companyAddress?: string;
-  oldText?: string;
+  company?: string;
+  role?: string;
   degree?: string;
+  GPA?: Number;
 }
 
 export interface Session {
@@ -200,13 +247,14 @@ export type ResumeModel = Model<Resume, {}, ResumeMethods>;
 const itemSchema = new Schema(
   {
     title: { type: String, default: "title" },
-    companyAddress: { type: String },
+    company: { type: String },
+    role: { type: String },
     text: { type: String, required: true },
     startDate: { type: String },
     endDate: { type: String },
-    oldText: { type: String },
     review: { type: String },
     degree: { type: String },
+    GPA: { type: Number },
   },
   { _id: false }
 );
@@ -252,11 +300,7 @@ const Resume = model<Resume, ResumeModel>("Resume", resumeSchema);
 export default Resume;
 export { Resume };
 
-저장할때, personal_info -> education/degree -> 
-introduction ->project experience -> related experience ->
-leadership experience ->work experience ->
-skills -> certificate -> award -> closing/summary 순으로 저장하라(없으면 안 넣어도 된다).
-
+저장할때, 리쥬메에 나열 된 세션 순서대로 저장하라.
 
 `;
 
